@@ -97,6 +97,7 @@ def parser(url, picture):
     ALL_DATA['IE_NAME'] = ''.join(
                     filter(None, map(unicode.strip, soup.find(class_='card-product__title').text.splitlines())))
     ALL_DATA['all_photo'] = []
+    ALL_DATA['documents'] = []
     ALL_DATA['IE_XML_ID'] = IE_XML_ID
     IE_XML_ID += 1
     ALL_DATA['IE_PREVIEW_PICTURE'] = picture
@@ -116,12 +117,16 @@ def parser(url, picture):
     except Exception as ex:
         ALL_DATA['CV_PRICE_1'].append('')
     try:
-        all_photo = [i.find('img')['src'] for i in soup.find_all(class_='swiper-slide')]
-        for i in set(all_photo):
-            print(i, '\n')
+        ALL_DATA['all_photo'] += [i.find('img')['src'] for i in soup.find_all(class_='swiper-slide') if i.find('img')['src'].split('/')[-1].startswith('full')]
     except Exception:
         ALL_DATA['IE_DETAIL_PICTURE'] = ''
     ALL_DATA['CV_CURRENCY_1'] = 'RUB'
+    try:
+        ALL_DATA['IE_DETAIL_TEXT'] = ''.join(filter(None, map(unicode.strip, str(soup.find(class_='full-description').find('p')).splitlines())))
+    except Exception:
+        ALL_DATA['IE_DETAIL_TEXT'] = ''
+    for doc in soup.find(class_='instructions__grid-wrap').find_all(class_='instructions__col instructions__dowload-file'):
+        print('https://paksmet.ru' + doc.find('a')['href'], '    ', doc.find('span').text)
     print(ALL_DATA)
     return ['fg', 'j']
 
@@ -151,7 +156,7 @@ for name in soup.find(class_='products-list').find_all('li'):
                 if not item.find(class_='name').text in ALL_PRODUCTS:
                     ALL_PRODUCTS.add(item.find(class_='name').text)
                     try:
-                        PREVIEW_PICTURE = item.find(class_='img')['src']
+                        PREVIEW_PICTURE = item.find('img')['src']
                     except Exception:
                         PREVIEW_PICTURE = ''
                     IE_NAME, IE_DATA = parser('https://paksmet.ru' + item.find(class_='product-header').find('a')['href'], PREVIEW_PICTURE)
@@ -169,7 +174,7 @@ for name in soup.find(class_='products-list').find_all('li'):
                         if not item.find(class_='name').text in ALL_PRODUCTS:
                             ALL_PRODUCTS.add(item.find(class_='name').text)
                             try:
-                                PREVIEW_PICTURE = item.find(class_='img')['src']
+                                PREVIEW_PICTURE = item.find('img')['src']
                             except Exception:
                                 PREVIEW_PICTURE = ''
                             IE_NAME, IE_DATA = parser(
@@ -186,7 +191,7 @@ for name in soup.find(class_='products-list').find_all('li'):
             if not item.find(class_='name').text in ALL_PRODUCTS:
                 ALL_PRODUCTS.add(item.find(class_='name').text)
                 try:
-                    PREVIEW_PICTURE = item.find(class_='img')['src']
+                    PREVIEW_PICTURE = item.find('img')['src']
                 except Exception:
                     PREVIEW_PICTURE = ''
                 IE_NAME, IE_DATA = parser('https://paksmet.ru' + item.find(class_='product-header').find('a')['href'],
@@ -204,7 +209,7 @@ for name in soup.find(class_='products-list').find_all('li'):
                     if not item.find(class_='name').text in ALL_PRODUCTS:
                         ALL_PRODUCTS.add(item.find(class_='name').text)
                         try:
-                            PREVIEW_PICTURE = item.find(class_='img')['src']
+                            PREVIEW_PICTURE = item.find('img')['src']
                         except Exception:
                             PREVIEW_PICTURE = ''
                         IE_NAME, IE_DATA = parser(
