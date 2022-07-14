@@ -3,8 +3,7 @@ from bs4 import BeautifulSoup
 from lxml.builder import unicode
 from transliterate import translit
 import time
-import random
-
+from requests.exceptions import ConnectionError
 
 IP_PROP_IMG = 59
 IP_PROP_1 = [f'IP_PROP{IP_PROP_IMG}']
@@ -85,57 +84,236 @@ IP_PROP_ALL = {
     "Встроенная тумба": "IP_PROP321",
     "Количество упаковок, шт": "IP_PROP322",
     "Выдвижной ящик под столешницей": "IP_PROP323",
+    "IE_XML_ID товара": "IP_PROP91",
 }
 ALL_PRODUCTS = set()
 
-def parser(url, picture):
-    global IP_PROP_IMG, IP_PROP_1, IP_PROP, IE_XML_ID, IP_PROP_ALL
+
+
+def parser(url, picture, proposal):
+    global IP_PROP_IMG, IP_PROP_1, IP_PROP, IE_XML_ID, IP_PROP_ALL, IP_PROP_LIST, IC_GROUP_LIST
     request = requests.get(url)
     src = request.text
     soup = BeautifulSoup(src, "lxml")
     ALL_DATA = {}
-    ALL_DATA['IE_NAME'] = ''.join(
-                    filter(None, map(unicode.strip, soup.find(class_='card-product__title').text.splitlines())))
-    ALL_DATA['all_photo'] = []
-    ALL_DATA['documents'] = []
+
+
     ALL_DATA['IE_XML_ID'] = IE_XML_ID
     IE_XML_ID += 1
     ALL_DATA['IE_PREVIEW_PICTURE'] = picture
     ALL_DATA['IE_PREVIEW_TEXT'] = ''
     ALL_DATA['IE_PREVIEW_TEXT_TYPE'] = 'html'
-    ALL_DATA['IE_CODE'] = translit(ALL_DATA['IE_NAME'], language_code='ru', reversed=True).replace(' ', '-')
     ALL_DATA['IE_DETAIL_TEXT_TYPE'] = 'html'
-    ALL_DATA['CV_PRICE_1'] = []
-    try:
-        if not soup.find(class_='product-attributes') is None:
-            for product in soup.find(class_='product-attributes').find_all(class_='item'):
-                ALL_DATA['CV_PRICE_1'].append(''.join(
-                    filter(None, map(unicode.strip, product.find(class_='price').text.splitlines())))[:-3])
-        else:
-            ALL_DATA['CV_PRICE_1'].append(''.join(
-                    filter(None, map(unicode.strip, soup.find(class_='price').text.splitlines())))[:-3])
-    except Exception as ex:
-        ALL_DATA['CV_PRICE_1'].append('')
-    try:
-        ALL_DATA['all_photo'] += [i.find('img')['src'] for i in soup.find_all(class_='swiper-slide') if i.find('img')['src'].split('/')[-1].startswith('full')]
-    except Exception:
-        ALL_DATA['IE_DETAIL_PICTURE'] = ''
     ALL_DATA['CV_CURRENCY_1'] = 'RUB'
+    ALL_DATA['documents'] = {}
+    ALL_DATA['all_photo'] = []
+    ALL_DATA['IC_GROUP_LIST'] = IC_GROUP_LIST
+    try:
+        ALL_DATA['all_photo'] += [i.find('img')['src'] for i in
+                                  soup.find(class_='swiper-wrapper').find_all(class_='swiper-slide')]
+        ALL_DATA['IE_DETAIL_PICTURE'] = ALL_DATA['all_photo'][0]
+        del ALL_DATA['all_photo'][0]
+    except Exception:
+        ALL_DATA['all_photo'] = ['']
+        ALL_DATA['IE_DETAIL_PICTURE'] = ''
     try:
         ALL_DATA['IE_DETAIL_TEXT'] = ''.join(filter(None, map(unicode.strip, str(soup.find(class_='full-description').find('p')).splitlines())))
     except Exception:
         ALL_DATA['IE_DETAIL_TEXT'] = ''
-    for doc in soup.find(class_='instructions__grid-wrap').find_all(class_='instructions__col instructions__dowload-file'):
-        print('https://paksmet.ru' + doc.find('a')['href'], '    ', doc.find('span').text)
+    try:
+        for doc in soup.find(class_='instructions__grid-wrap').find_all(class_='instructions__col instructions__dowload-file'):
+            ALL_DATA['documents'][doc.find('span').text] = 'https://paksmet.ru' + doc.find('a')['href']
+    except Exception:
+        pass
+    if proposal:
+        ALL_DATA['CV_PRICE_1'] = ''
+        ALL_DATA['IE_DETAIL_PICTURE'] = ''
+        ALL_DATA['IE_NAME'] = ''
+        ALL_DATA['proposal'] = []
+        ALL_DATA['IE_CODE'] = ''
+        if not soup.find(class_='product-attributes') is None:
+            link_proposal = False
+            all_name = [str(item.find(class_='name').find('h3').text).replace('Для', '').strip() for item in soup.find(class_='product-attributes').find_all(class_='item')]
+            try:
+                for p in soup.find(class_='field_content').find_all('p'):
+                    description = p.text
+                    if not ':' in p.find('span').text or p.text == p.find('span').text:
+                        continue
+                    description_name, description_text = description.split(':')[0], description.split(':')[1]
+                    nameindesc = False
+                    for i in all_name:
+                        if i in description_name:
+                            nameindesc = True
+                    if not ('азмер' in description_name or nameindesc or (IC_GROUP_LIST[0] in ['Металлические стеллажи', 'Верстаки и Инструментальные шкафы'] and 'омплектаци' in description_name)):
+                        if description_name in IP_PROP_ALL.keys():
+                            IP_PROP_LIST[description_name] = IP_PROP_ALL[description_name]
+                            ALL_DATA[IP_PROP_ALL[description_name]] = description_text
+                        else:
+                            IP_PROP_ALL[description_name] = f"IP_PROP{IP_PROP}"
+                            IP_PROP += 1
+                            IP_PROP_LIST[description_name] = IP_PROP_ALL[description_name]
+                            ALL_DATA[IP_PROP_ALL[description_name]] = description_text
+
+            except Exception:
+                pass
+            try:
+                if soup.find(class_='name').find('h3').find('a'):
+                    link_proposal = True
+            except Exception:
+                pass
+            if link_proposal:
+                for item in soup.find(class_='product-attributes').find_all(class_='item'):
+                    IE_SUBNAME = str(item.find(class_='name').find('h3').text).replace('Для ', '').strip()
+                    item_url = 'https://paksmet.ru' + item.find('a')['href']
+                    try:
+                        item_request = requests.get(item_url)
+                        item_src = item_request.text
+                        item_soup = BeautifulSoup(item_src, 'lxml')
+                    except ConnectionError:
+                        print('ConnectionError')
+                        continue
+                    IE_NAME = ''.join(filter(None, map(unicode.strip, item_soup.find(class_='card-product__title').text.splitlines())))
+                    IE_CODE = translit(IE_NAME, language_code='ru', reversed=True).replace(' ', '-')
+                    try:
+                        CV_PRICE_1 = ''.join(
+                            filter(None, map(unicode.strip, item_soup.find(class_='price').text.splitlines())))[:-3]
+                    except Exception:
+                        CV_PRICE_1 = ''
+                    try:
+                        for p in soup.find(class_='field_content').find_all('p'):
+                            description = p.text
+                            if not ':' in p.find('span').text or p.text == p.find('span').text:
+                                continue
+                            description_name, description_text = description.split(':')[0], description.split(':')[1]
+                            if 'азмер' in description_name:
+                                if '/' in description_name:
+                                    pass
+                                else:
+                                    pass
+                            elif IC_GROUP_LIST[0] in ['Металлические стеллажи', 'Верстаки и Инструментальные шкафы'] and 'омплектаци' in description_name:
+                                if description_name in IP_PROP_ALL.keys():
+                                    IP_PROP_LIST[description_name] = IP_PROP_ALL[description_name]
+                                    ALL_DATA[IP_PROP_ALL[description_name]] = description_text
+                                else:
+                                    IP_PROP_ALL[description_name] = f"IP_PROP{IP_PROP}"
+                                    IP_PROP += 1
+                                    IP_PROP_LIST[description_name] = IP_PROP_ALL[description_name]
+                                    ALL_DATA[IP_PROP_ALL[description_name]] = description_text
+                    except Exception:
+                        pass
+                    ALL_DATA["proposal"].append(dict(
+                        [('IE_XML_ID', IE_XML_ID), ('IE_NAME', IE_NAME), ('IE_CODE', IE_CODE), ('CV_PRICE_1', CV_PRICE_1), ('IP_PROP91', ALL_DATA['IE_XML_ID'])]))
+                    IE_XML_ID += 1
+            else:
+                for item in soup.find(class_='product-attributes').find_all(class_='item'):
+                    try:
+                        IE_NAME = ''.join(filter(None, map(unicode.strip, soup.find(class_='card-product__title').text.splitlines())))
+                        IE_SUBNAME = str(item.find(class_='name').find('h3').text).strip()
+                        IE_NAME += ' ' + IE_SUBNAME
+                        IE_SUBNAME = IE_SUBNAME.replace('Для ', '')
+                    except AttributeError as ex:
+                        IE_NAME = ''
+                    try:
+                        IP_PROP71 = item.find(class_='name').find(class_='size').text.split('х')[0].split('мм')[0].strip().split(' ')[-1]
+                        IP_PROP_LIST['Высота, мм'] = IP_PROP71
+                    except AttributeError:
+                        try:
+                            IP_PROP71 = item.find(class_='name').find('h3').text.split('х')[0].split('мм')[0].strip().split(' ')[-1]
+                            IP_PROP_LIST['Высота, мм'] = IP_PROP71
+                        except Exception as ex:
+                            print(item.find(class_='name'))
+                            IP_PROP71 = ''
+                    try:
+                        IP_PROP72 = item.find(class_='name').find(class_='size').text.split('х')[1].split('мм')[0].strip().split(' ')[-1]
+                        IP_PROP_LIST['Ширина, мм'] = IP_PROP72
+                    except AttributeError:
+                        try:
+                            IP_PROP72 = \
+                            item.find(class_='name').find('h3').text.split('х')[1].split('мм')[0].strip().split(' ')[-1]
+                            IP_PROP_LIST['Ширина, мм'] = IP_PROP72
+                        except Exception as ex:
+                            IP_PROP72 = ''
+                    try:
+                        IP_PROP73 = item.find(class_='name').find(class_='size').text.split('х')[2].split('мм')[0].strip().split(' ')[-1]
+                        IP_PROP_LIST['Глубина, мм'] = IP_PROP73
+                    except AttributeError:
+                        try:
+                            IP_PROP73 = \
+                            item.find(class_='name').find('h3').text.split('х')[2].split('мм')[0].strip().split(
+                                ' ')[-1]
+                            IP_PROP_LIST['Глубина, мм'] = IP_PROP73
+                        except Exception as ex:
+                            IP_PROP73 = ''
+                    IE_CODE = translit(IE_NAME, language_code='ru', reversed=True).replace(' ', '-')
+                    try:
+                        CV_PRICE_1 = item.find(class_='price').text.split('р.')[0].strip()
+                    except Exception:
+                        CV_PRICE_1 = ''
+                    ALL_DATA["proposal"].append(dict(
+                        [('IE_XML_ID', IE_XML_ID), ('IE_NAME', IE_NAME), ('IE_CODE', IE_CODE), ('CV_PRICE_1', CV_PRICE_1), ('IP_PROP91', ALL_DATA['IE_XML_ID']), ('IP_PROP71', IP_PROP71), ('IP_PROP72', IP_PROP72), ('IP_PROP73', IP_PROP73)]))
+                    IE_XML_ID += 1
+        else:
+            IE_NAME = ''.join(filter(None, map(unicode.strip, soup.find(class_='card-product__title').text.splitlines())))
+            IE_CODE = translit(IE_NAME, language_code='ru', reversed=True).replace(' ', '-')
+            try:
+                CV_PRICE_1 = ''.join(
+                    filter(None, map(unicode.strip, soup.find(class_='price').text.splitlines())))[:-3]
+            except Exception:
+                CV_PRICE_1 = ''
+            ALL_DATA["proposal"].append(dict([('IE_XML_ID', IE_XML_ID), ('IE_NAME', IE_NAME), ('IE_CODE', IE_CODE), ('CV_PRICE_1', CV_PRICE_1), ('IP_PROP91', ALL_DATA['IE_XML_ID'])]))
+            IE_XML_ID += 1
+    else:
+        ALL_DATA['IE_NAME'] = ''.join(filter(None, map(unicode.strip, soup.find(class_='card-product__title').text.splitlines())))
+        ALL_DATA['IE_CODE'] = translit(ALL_DATA['IE_NAME'], language_code='ru', reversed=True).replace(' ', '-')
+        try:
+            ALL_DATA['CV_PRICE_1'] = ''.join(filter(None, map(unicode.strip, soup.find(class_='price').text.splitlines())))[:-3]
+        except Exception:
+            ALL_DATA['CV_PRICE_1'] = ''
+        for p in soup.find(class_='field_content').find_all('p'):
+            description = p.text
+            if not ':' in p.find('span').text or p.text == p.find('span').text:
+                continue
+            description_name, description_text = description.split(':')[0], description.split(':')[1]
+            if not 'азмер' in description_name:
+                if description_name in IP_PROP_ALL.keys():
+                    IP_PROP_LIST[description_name] = IP_PROP_ALL[description_name]
+                    ALL_DATA[IP_PROP_ALL[description_name]] = description_text
+                else:
+                    IP_PROP_ALL[description_name] = f"IP_PROP{IP_PROP}"
+                    IP_PROP += 1
+                    IP_PROP_LIST[description_name] = IP_PROP_ALL[description_name]
+                    ALL_DATA[IP_PROP_ALL[description_name]] = description_text
+            elif 'азмер' in description_name:
+                try:
+                    ALL_DATA['IP_PROP71'] = description_text.split('х')[0].split('мм')[0].strip().split(' ')[-1]
+                    IP_PROP_LIST['Высота, мм'] = ALL_DATA['IP_PROP71']
+                except Exception as ex:
+                    print(ex)
+                    ALL_DATA['IP_PROP71'] = ''
+                try:
+                    ALL_DATA['IP_PROP72'] = description_text.split('х')[1].split('мм')[0].strip().split(' ')[-1]
+                    IP_PROP_LIST['Ширина, мм'] = ALL_DATA['IP_PROP72']
+                except Exception:
+                    ALL_DATA['IP_PROP72'] = ''
+                try:
+                    ALL_DATA['IP_PROP73'] = description_text.split('х')[2].split('мм')[0].strip().split(' ')[-1]
+                    IP_PROP_LIST['Глубина, мм'] = ALL_DATA['IP_PROP73']
+                except Exception:
+                    ALL_DATA['IP_PROP73'] = ''
+
     print(ALL_DATA)
-    return ['fg', 'j']
+    return [ALL_DATA['IE_NAME'], ALL_DATA]
 
 
 request = requests.get('https://paksmet.ru/produktsiya')
 src = request.text
 soup = BeautifulSoup(src, "lxml")
+print(soup)
 for name in soup.find(class_='products-list').find_all('li'):
     print(name.find('span').text, 'https://paksmet.ru' + name.find('a')['href'] + '\n')
+    proposal = True
+    if name.find('span').text in ['Картотечные шкафы', 'Сейфы', 'Бухгалтерские шкафы']:
+        proposal = False
     main_url = 'https://paksmet.ru' + name.find('a')['href']
     IC_GROUP_LIST = [name.find('span').text]
     all_data = {}
@@ -159,7 +337,9 @@ for name in soup.find(class_='products-list').find_all('li'):
                         PREVIEW_PICTURE = item.find('img')['src']
                     except Exception:
                         PREVIEW_PICTURE = ''
-                    IE_NAME, IE_DATA = parser('https://paksmet.ru' + item.find(class_='product-header').find('a')['href'], PREVIEW_PICTURE)
+                    IE_NAME, IE_DATA = parser(
+                        'https://paksmet.ru' + item.find(class_='product-header').find('a')['href'], PREVIEW_PICTURE,
+                        proposal)
                     all_data[IE_NAME] = IE_DATA
                     print('https://paksmet.ru' + item.find(class_='product-header').find('a')['href'])
             try:
@@ -179,7 +359,7 @@ for name in soup.find(class_='products-list').find_all('li'):
                                 PREVIEW_PICTURE = ''
                             IE_NAME, IE_DATA = parser(
                                 'https://paksmet.ru' + item.find(class_='product-header').find('a')['href'],
-                                PREVIEW_PICTURE)
+                                PREVIEW_PICTURE, proposal)
                             print('https://paksmet.ru' + item.find(class_='product-header').find('a')['href'])
                     IC_GROUP_LIST.pop()
             except Exception:
@@ -195,7 +375,7 @@ for name in soup.find(class_='products-list').find_all('li'):
                 except Exception:
                     PREVIEW_PICTURE = ''
                 IE_NAME, IE_DATA = parser('https://paksmet.ru' + item.find(class_='product-header').find('a')['href'],
-                                          PREVIEW_PICTURE)
+                                          PREVIEW_PICTURE, proposal)
                 print('https://paksmet.ru' + item.find(class_='product-header').find('a')['href'])
         try:
             for sub_page in soup.find(class_='category-list').find_all('a'):
@@ -214,118 +394,46 @@ for name in soup.find(class_='products-list').find_all('li'):
                             PREVIEW_PICTURE = ''
                         IE_NAME, IE_DATA = parser(
                             'https://paksmet.ru' + item.find(class_='product-header').find('a')['href'],
-                            PREVIEW_PICTURE)
+                            PREVIEW_PICTURE, proposal)
                         print('https://paksmet.ru' + item.find(class_='product-header').find('a')['href'])
                 IC_GROUP_LIST.pop()
         except Exception:
             pass
-
-    #        try:
-    #            all_data[IE_NAME]['IE_DETAIL_PICTURE'] = 'https://davitamebel.ru' + \
-    #                                                 product_soup.find('img', class_='big-photo')['src']
-    #        except Exception:
-    #            all_data[IE_NAME]['IE_DETAIL_PICTURE'] = ''
-    #        try:
-    #            for img in product_soup.find(class_='big-photos').find_all('img')[1:]:
-    #                all_data[IE_NAME]['all_photo'].append('https://davitamebel.ru' + img['src'])
-    #        except Exception:
-    #            pass
-    #        try:
-    #            all_data[IE_NAME]['IE_DETAIL_TEXT'] = ''.join(
-    #                filter(None, map(unicode.strip, str(product_soup.find_all(class_='p')[0]).splitlines())))
-    #        except Exception:
-    #            all_data[IE_NAME]['IE_DETAIL_TEXT'] = ''
-    #        for ipr in product_soup.find('table', class_='product-properties').find_all('tr'):
-    #            if 'Размеры, мм' in ipr.find_all('td')[0].text:
-    #                delimiter = 'x'
-    #                if len(ipr.find_all('td')[1].text.split(delimiter)) == 1:
-    #                    delimiter = 'х'
-    #                try:
-    #                    IP_PROP_LIST['Высота, мм'] = "IP_PROP71"
-    #                    all_data[IE_NAME][IP_PROP_LIST['Высота, мм']] = ipr.find_all('td')[1].text.split(delimiter)[0]
-    #                except Exception:
-    #                    pass
-    #                try:
-    #                    IP_PROP_LIST['Ширина, мм'] = "IP_PROP72"
-    #                    all_data[IE_NAME][IP_PROP_LIST['Ширина, мм']] = ipr.find_all('td')[1].text.split(delimiter)[1]
-    #                except Exception:
-    #                    pass
-    #                try:
-    #                    IP_PROP_LIST['Глубина, мм'] = "IP_PROP73"
-    #                    all_data[IE_NAME][IP_PROP_LIST['Глубина, мм']] = ipr.find_all('td')[1].text.split(delimiter)[2]
-    #                except Exception:
-    #                    pass
-    #            elif 'Срок гарантии, лет' in ipr.find_all('td')[0].text:
-    #                IP_PROP_LIST['Гарантия'] = "IP_PROP83"
-    #                all_data[IE_NAME][IP_PROP_LIST['Гарантия']] = ipr.find_all('td')[1].text + ' лет'
-    #            elif 'Цветовое исполнение' in ipr.find_all('td')[0].text:
-    #                IP_PROP_LIST['Цвет'] = IP_PROP_ALL['Цвет']
-    #                all_data[IE_NAME][IP_PROP_LIST['Цвет']] = ipr.find_all('td')[1].text
-    #            elif ipr.find_all('td')[0].text in IP_PROP_ALL.keys():
-    #                IP_PROP_LIST[ipr.find_all('td')[0].text] = IP_PROP_ALL[ipr.find_all('td')[0].text]
-    #                all_data[IE_NAME][IP_PROP_ALL[ipr.find_all('td')[0].text]] = ipr.find_all('td')[1].text
-    #            else:
-    #                IP_PROP_LIST[ipr.find_all('td')[0].text] = f"IP_PROP{IP_PROP}"
-    #                IP_PROP_ALL[ipr.find_all('td')[0].text] = f"IP_PROP{IP_PROP}"
-    #                IP_PROP += 1
-    #                all_data[IE_NAME][IP_PROP_LIST[ipr.find_all('td')[0].text]] = ipr.find_all('td')[1].text
-    #        try:
-    #            #print(product_soup.find_all('li', class_='breadcrumbs'))
-    #            for gr in product_soup.find('ul', class_='breadcrumbs').find_all('li')[:-1]:
-    #                gri = ''.join(filter(None, map(unicode.strip, gr.find(class_='text').text.splitlines())))
-    #                all_data[IE_NAME]['IC_GROUP_LIST'].append(gri)
-    #                IC_GROUP += 1
-    #        except Exception:
-    #            pass
-    #        IC_GROUP_COUNT = max(IC_GROUP_COUNT, IC_GROUP)
-    #        #print(all_data[IE_NAME]['CV_PRICE_1'])
-#
-    #with open(f"data davita/{name}.csv", "w", encoding='windows-1251', newline='') as file:
-    #    writer = csv.writer(file, delimiter=';')
-    #    header_table = tuple(
-    #        ['IE_XML_ID', 'IE_NAME', 'IE_PREVIEW_PICTURE', 'IE_PREVIEW_TEXT', 'IE_PREVIEW_TEXT_TYPE', 'IE_CODE',
-    #         'IE_DETAIL_TEXT_TYPE', 'IE_DETAIL_PICTURE', 'IE_DETAIL_TEXT'] + IP_PROP_1 + list(IP_PROP_LIST.values()) + [
-    #            f"IC_GROUP{u}" for u in range(IC_GROUP_COUNT)] + ['CV_PRICE_1', 'CV_CURRENCY_1'])
-    #    writer.writerow(header_table)
-    #with open(f"data davita/{name}.csv", "a", encoding='windows-1251', newline='') as file:
-    #    for key, item in all_data.items():
-    #        for img in item['all_photo']:
-    #            try:
-    #                table_list = [item['IE_XML_ID'], item['IE_NAME'], item['IE_PREVIEW_PICTURE'],
-    #                              item['IE_PREVIEW_TEXT'],
-    #                              item['IE_PREVIEW_TEXT_TYPE'], item['IE_CODE'], item['IE_DETAIL_TEXT_TYPE'],
-    #                              item['IE_DETAIL_PICTURE'], item['IE_DETAIL_TEXT'], img]
-    #                for ip in IP_PROP_LIST.values():
-    #                    if ip in item.keys():
-    #                        table_list.append(item[ip])
-    #                    else:
-    #                        table_list.append('')
-    #                for n in range(IC_GROUP_COUNT):
-    #                    if n < len(item['IC_GROUP_LIST']):
-    #                        table_list.append(item['IC_GROUP_LIST'][n])
-    #                    else:
-    #                        table_list.append('')
-    #                table_list.append(item['CV_PRICE_1'])
-    #                table_list.append(item['CV_CURRENCY_1'])
-    #                writer = csv.writer(file, delimiter=';')
-    #                writer.writerow(tuple(table_list))
-    #            except UnicodeEncodeError:
-    #                pass
-    #print(IE_XML_ID - 1905)
-
-#parser('nabory_ofisnoy_mebeli_1', 5)
-#time.sleep(1)
-#parser('ofisnye-shkafy', 5)
-#time.sleep(1)
-#parser('ofisnyj-stol', 6)
-#time.sleep(1)
-#parser('tumba-ofisnaja', 2)
-#time.sleep(1)
-#
-#
-#for key, value in IP_PROP_ALL.items():
+# with open(f"data davita/{name}.csv", "w", encoding='windows-1251', newline='') as file:
+#    writer = csv.writer(file, delimiter=';')
+#    header_table = tuple(
+#        ['IE_XML_ID', 'IE_NAME', 'IE_PREVIEW_PICTURE', 'IE_PREVIEW_TEXT', 'IE_PREVIEW_TEXT_TYPE', 'IE_CODE',
+#         'IE_DETAIL_TEXT_TYPE', 'IE_DETAIL_PICTURE', 'IE_DETAIL_TEXT'] + IP_PROP_1 + list(IP_PROP_LIST.values()) + [
+#            f"IC_GROUP{u}" for u in range(IC_GROUP_COUNT)] + ['CV_PRICE_1', 'CV_CURRENCY_1'])
+#    writer.writerow(header_table)
+# with open(f"data davita/{name}.csv", "a", encoding='windows-1251', newline='') as file:
+#    for key, item in all_data.items():
+#        for img in item['all_photo']:
+#            try:
+#                table_list = [item['IE_XML_ID'], item['IE_NAME'], item['IE_PREVIEW_PICTURE'],
+#                              item['IE_PREVIEW_TEXT'],
+#                              item['IE_PREVIEW_TEXT_TYPE'], item['IE_CODE'], item['IE_DETAIL_TEXT_TYPE'],
+#                              item['IE_DETAIL_PICTURE'], item['IE_DETAIL_TEXT'], img]
+#                for ip in IP_PROP_LIST.values():
+#                    if ip in item.keys():
+#                        table_list.append(item[ip])
+#                    else:
+#                        table_list.append('')
+#                for n in range(IC_GROUP_COUNT):
+#                    if n < len(item['IC_GROUP_LIST']):
+#                        table_list.append(item['IC_GROUP_LIST'][n])
+#                    else:
+#                        table_list.append('')
+#                table_list.append(item['CV_PRICE_1'])
+#                table_list.append(item['CV_CURRENCY_1'])
+#                writer = csv.writer(file, delimiter=';')
+#                writer.writerow(tuple(table_list))
+#            except UnicodeEncodeError:
+#                pass
+# print(IE_XML_ID - 1905)
+# for key, value in IP_PROP_ALL.items():
 #    print(f'"{key}": "{value}",')
-#print('\n\n')
+# print('\n\n')
 #
-#for key, value in IP_PROP_ALL.items():
+# for key, value in IP_PROP_ALL.items():
 #    print(f'{value}    {key}')

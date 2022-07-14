@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 from lxml.builder import unicode
 import time
 import random
+from requests.exceptions import TooManyRedirects, ConnectionError
 
 IP_PROP_IMG = 59
 IP_PROP_1 = [f'IP_PROP{IP_PROP_IMG}']
@@ -78,6 +79,7 @@ with open(f"data/documents/documents.csv", "w", encoding='windows-1251', newline
     header_table = ('IE_XML_ID', 'IE_NAME', 'FILE NAME', 'URL')
     writer.writerow(header_table)
 
+
 def parser(name, pages):
     global IP_PROP_IMG, IP_PROP_1, IP_PROP_DOC, IP_PROP, IE_XML_ID, IP_PROP_ALL, ALL_PRODUCTS
     all_data = {}
@@ -89,8 +91,8 @@ def parser(name, pages):
         request = requests.get(url)
         src = request.text
         soup = BeautifulSoup(src, "lxml")
-        print(num)
-        #time.sleep(1 + random.random())
+        print('Page', num)
+        # time.sleep(1 + random.random())
         for i in soup.find_all(class_='catalog')[1].find_all(class_='tile-card'):
             IE_NAME = i.find(class_='tile-card__title').text
             if IE_NAME in ALL_PRODUCTS:
@@ -122,7 +124,7 @@ def parser(name, pages):
             all_data[IE_NAME]['CV_CURRENCY_1'] = 'RUB'
             try:
                 all_data[IE_NAME]['IE_DETAIL_PICTURE'] = 'https://www.safe.ru' + \
-                                                     product_soup.find(class_='card-slide__img-inner')['href']
+                                                         product_soup.find(class_='card-slide__img-inner')['href']
             except Exception:
                 all_data[IE_NAME]['IE_DETAIL_PICTURE'] = ''
             try:
@@ -170,9 +172,13 @@ def parser(name, pages):
                 elif ipr.find_all('td')[0].text[:-1] in IP_PROP_ALL.keys():
                     if ipr.find_all('td')[1].text == '-':
                         continue
-                    elif ipr.find_all('td')[1].text[:len(ipr.find_all('td')[1].text)//2] == ipr.find_all('td')[1].text[len(ipr.find_all('td')[1].text)//2:]:
+                    elif ipr.find_all('td')[1].text[:len(ipr.find_all('td')[1].text) // 2] == ipr.find_all('td')[
+                                                                                                  1].text[len(
+                        ipr.find_all('td')[1].text) // 2:]:
                         IP_PROP_LIST[ipr.find_all('td')[0].text[:-1]] = IP_PROP_ALL[ipr.find_all('td')[0].text[:-1]]
-                        all_data[IE_NAME][IP_PROP_ALL[ipr.find_all('td')[0].text[:-1]]] = ipr.find_all('td')[1].text[:len(ipr.find_all('td')[1].text)//2]
+                        all_data[IE_NAME][IP_PROP_ALL[ipr.find_all('td')[0].text[:-1]]] = ipr.find_all('td')[1].text[
+                                                                                          :len(ipr.find_all('td')[
+                                                                                                   1].text) // 2]
                     else:
                         IP_PROP_LIST[ipr.find_all('td')[0].text[:-1]] = IP_PROP_ALL[ipr.find_all('td')[0].text[:-1]]
                         all_data[IE_NAME][IP_PROP_ALL[ipr.find_all('td')[0].text[:-1]]] = ipr.find_all('td')[1].text
@@ -180,21 +186,70 @@ def parser(name, pages):
                     IP_PROP_LIST[ipr.find_all('td')[0].text[:-1]] = f"IP_PROP{IP_PROP}"
                     IP_PROP_ALL[ipr.find_all('td')[0].text[:-1]] = f"IP_PROP{IP_PROP}"
                     IP_PROP += 1
-                    if ipr.find_all('td')[1].text[:len(ipr.find_all('td')[1].text)//2] == ipr.find_all('td')[1].text[len(ipr.find_all('td')[1].text)//2:]:
-                        all_data[IE_NAME][IP_PROP_ALL[ipr.find_all('td')[0].text[:-1]]] = ipr.find_all('td')[1].text[:len(ipr.find_all('td')[1].text)//2]
+                    if ipr.find_all('td')[1].text[:len(ipr.find_all('td')[1].text) // 2] == ipr.find_all('td')[1].text[
+                                                                                            len(ipr.find_all('td')[
+                                                                                                    1].text) // 2:]:
+                        all_data[IE_NAME][IP_PROP_ALL[ipr.find_all('td')[0].text[:-1]]] = ipr.find_all('td')[1].text[
+                                                                                          :len(ipr.find_all('td')[
+                                                                                                   1].text) // 2]
                     else:
                         all_data[IE_NAME][IP_PROP_LIST[ipr.find_all('td')[0].text[:-1]]] = ipr.find_all('td')[1].text
             try:
                 for ipr in product_soup.find_all(class_='text-block')[1].find_all('a'):
-                    all_data[IE_NAME]['documents'].append('https://yarskmebel.tmweb.ru/upload/docs/' + ipr.text + ' ' + IE_NAME + '.pdf')
-                    with open(f"data/documents/documents.csv", "a", encoding='windows-1251', newline='') as file:
-                        writer = csv.writer(file, delimiter=';')
-                        table_doc = (all_data[IE_NAME]['IE_XML_ID'], all_data[IE_NAME]['IE_NAME'], f'{ipr.text} {IE_NAME}.pdf', f'https://www.safe.ru{ipr["href"]}')
-                        writer.writerow(table_doc)
-            except IndexError:
-                all_data[IE_NAME]['documents'].append('')
+                    try:
+                        testrequest = requests.get(f'https://www.safe.ru{ipr["href"]}')
+                        testsrc = testrequest.text
+                        testsoup = BeautifulSoup(testsrc, "lxml")
+                        if testsoup.title is None:
+                            all_data[IE_NAME]['documents'].append('https://yarskmebel.tmweb.ru/upload/docs/' + ipr.text + ' ' + IE_NAME + '.pdf')
+                            with open(f"data/documents/documents.csv", "a", encoding='windows-1251', newline='') as file:
+                                writer = csv.writer(file, delimiter=';')
+                                table_doc = (all_data[IE_NAME]['IE_XML_ID'], all_data[IE_NAME]['IE_NAME'], f'{ipr.text} {IE_NAME}.pdf', f'https://www.safe.ru{ipr["href"]}')
+                                writer.writerow(table_doc)
+                        else:
+                            print(IE_XML_ID - 1, 'Fake document!!!')
+                    except TooManyRedirects:
+                        print(IE_XML_ID - 1, 'Fake document!!!')
+                    except ConnectionError:
+                        print(IE_XML_ID - 1, 'Connection Error')
             except UnicodeEncodeError:
                 pass
+            except Exception:
+                all_data[IE_NAME]['documents'].append('')
+                # if not testsoup.find(class_='container').find('h1').text == 'Страница не найдена':
+                #    #print("IF working")
+                #    all_data[IE_NAME]['documents'].append('https://yarskmebel.tmweb.ru/upload/docs/' + ipr.text + ' ' + IE_NAME + '.pdf')
+                #    with open(f"data/documents/documents.csv", "a", encoding='windows-1251', newline='') as file:
+                #        writer = csv.writer(file, delimiter=';')
+                #        table_doc = (all_data[IE_NAME]['IE_XML_ID'], all_data[IE_NAME]['IE_NAME'], f'{ipr.text} {IE_NAME}.pdf', f'https://www.safe.ru{ipr["href"]}')
+                #        writer.writerow(table_doc)
+                # else:
+                #    print(all_data[IE_NAME]['IE_XML_ID'], 'Fake document!!!!')
+                #
+                #
+                # except AttributeError:
+                #    #print('Attribute working')
+                #    all_data[IE_NAME]['documents'].append('https://yarskmebel.tmweb.ru/upload/docs/' + ipr.text + ' ' + IE_NAME + '.pdf')
+                #    with open(f"data/documents/documents.csv", "a", encoding='windows-1251', newline='') as file:
+                #        writer = csv.writer(file, delimiter=';')
+                #        table_doc = (
+                #        all_data[IE_NAME]['IE_XML_ID'], all_data[IE_NAME]['IE_NAME'], f'{ipr.text} {IE_NAME}.pdf',
+                #        f'https://www.safe.ru{ipr["href"]}')
+                #        writer.writerow(table_doc)
+                # except TooManyRedirects:
+                #    print(all_data[IE_NAME]['IE_XML_ID'], 'Fake document!!!!')
+                # except Exception:
+                #    all_data[IE_NAME]['documents'].append('https://yarskmebel.tmweb.ru/upload/docs/' + ipr.text + ' ' + IE_NAME + '.pdf')
+                #    with open(f"data/documents/documents.csv", "a", encoding='windows-1251', newline='') as file:
+                #        writer = csv.writer(file, delimiter=';')
+                #        table_doc = (
+                #        all_data[IE_NAME]['IE_XML_ID'], all_data[IE_NAME]['IE_NAME'], f'{ipr.text} {IE_NAME}.pdf',
+                #        f'https://www.safe.ru{ipr["href"]}')
+                #        writer.writerow(table_doc)
+            # except IndexError:
+            #    all_data[IE_NAME]['documents'].append('')
+            # except UnicodeEncodeError:
+            #    pass
             try:
                 for gr in product_soup.find_all('li', class_='b-breadcrumbs-item')[:-1]:
                     gri = ''.join(filter(None, map(unicode.strip, gr.text.splitlines())))
@@ -203,7 +258,7 @@ def parser(name, pages):
             except Exception:
                 pass
             IC_GROUP_COUNT = max(IC_GROUP_COUNT, IC_GROUP)
-            #time.sleep(1 + random.random())
+            # time.sleep(1 + random.random())
 
     with open(f"data/{name}.csv", "w", encoding='windows-1251', newline='') as file:
         writer = csv.writer(file, delimiter=';')
@@ -241,7 +296,7 @@ def parser(name, pages):
 
 parser('metallicheskaya-mebel', 11)
 time.sleep(2)
-parser('seyfy', 25)
+parser('seyfy', 25)#25
 time.sleep(2)
 parser('meditsinskaya-mebel-i-oborudovanie', 8)
 time.sleep(2)
@@ -255,8 +310,6 @@ parser('drugaya-produktsiya', 4)
 time.sleep(2)
 parser('ofisnaya-mebel', 6)
 time.sleep(2)
-
-
 
 
 for key, value in IP_PROP_ALL.items():
