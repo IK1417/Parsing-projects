@@ -10,7 +10,7 @@ IP_PROP_1 = [f'IP_PROP{IP_PROP_IMG}']
 #IP_PROP_DOC = 64
 #IP_PROP_1 += [f'IP_PROP{IP_PROP_DOC}']
 IP_PROP = 319
-IE_XML_ID = 1905
+IE_XML_ID = 1911
 IP_PROP_ALL = {
     "Размеры внутренние, мм (ВхШхГ)": "IP_PROP76",
     "Вес, кг": "IP_PROP77",
@@ -182,14 +182,14 @@ def parser(name, pages):
             IC_GROUP_COUNT = max(IC_GROUP_COUNT, IC_GROUP)
             #print(all_data[IE_NAME]['CV_PRICE_1'])
 
-    with open(f"data davita/{name}.csv", "w", encoding='windows-1251', newline='') as file:
+    with open(f"data davita/{name}_utf-8.csv", "w", encoding='utf-8', newline='') as file:
         writer = csv.writer(file, delimiter=';')
         header_table = tuple(
             ['IE_XML_ID', 'IE_NAME', 'IE_PREVIEW_PICTURE', 'IE_PREVIEW_TEXT', 'IE_PREVIEW_TEXT_TYPE', 'IE_CODE',
              'IE_DETAIL_TEXT_TYPE', 'IE_DETAIL_PICTURE', 'IE_DETAIL_TEXT'] + IP_PROP_1 + list(IP_PROP_LIST.values()) + [
                 f"IC_GROUP{u}" for u in range(IC_GROUP_COUNT)] + ['CV_PRICE_1', 'CV_CURRENCY_1'])
         writer.writerow(header_table)
-    with open(f"data davita/{name}.csv", "a", encoding='windows-1251', newline='') as file:
+    with open(f"data davita/{name}_utf-8.csv", "a", encoding='utf-8', newline='') as file:
         for key, item in all_data.items():
             for img in item['all_photo']:
                 try:
@@ -213,7 +213,7 @@ def parser(name, pages):
                     writer.writerow(tuple(table_list))
                 except UnicodeEncodeError:
                     pass
-    print(IE_XML_ID - 1905)
+    print(IE_XML_ID - 1911)
 
 parser('nabory_ofisnoy_mebeli_1', 5)
 time.sleep(1)
