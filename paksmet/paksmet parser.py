@@ -12,6 +12,7 @@ IP_PROP_1 += [f'IP_PROP{IP_PROP_DOC}']
 IP_PROP = 325
 IE_XML_ID = 2661
 IP_PROP_ALL = {
+    "Привязка к бренду": "IP_PROP61",
     "Размеры внутренние, мм (ВхШхГ)": "IP_PROP76",
     "Вес, кг": "IP_PROP77",
     "Объём, л": "IP_PROP75",
@@ -89,7 +90,7 @@ IP_PROP_ALL = {
 }
 ALL_PRODUCTS = set()
 
-with open(f"data paksmet/documents/documents.csv", "w", encoding='utf-8', newline='') as file:
+with open(f"data paksmet/documents/documents.csv", "w", encoding='windows-1251', newline='') as file:
     writer = csv.writer(file, delimiter=';')
     header_table = ('IE_XML_ID', 'IE_NAME', 'FILE NAME', 'URL')
     writer.writerow(header_table)
@@ -140,7 +141,7 @@ def parser(url, picture, proposal):
         for doc in soup.find(class_='instructions__grid-wrap').find_all(
                 class_='instructions__col instructions__dowload-file'):
             ALL_DATA['documents'].append('https://paksmet.ru' + doc.find('a')['href'])
-            with open(f"data paksmet/documents/documents.csv", "a", encoding='utf-8', newline='') as file:
+            with open(f"data paksmet/documents/documents.csv", "a", encoding='windows-1251', newline='') as file:
                 writer = csv.writer(file, delimiter=';')
                 table_doc = (ALL_DATA['IE_XML_ID'], PRE_NAME, f'{doc.find("span").text} {PRE_NAME}.{doc.find("a")["href"].split(".")[-1]}', 'https://paksmet.ru' + doc.find('a')['href'])
                 writer.writerow(table_doc)
@@ -149,6 +150,12 @@ def parser(url, picture, proposal):
     if not ALL_DATA['documents']:
         print(ALL_DATA['documents'])
         ALL_DATA['documents'] = ['']
+    IP_PROP_LIST["Производитель"] = "IP_PROP74"
+    IP_PROP_LIST["Страна"] = "IP_PROP265"
+    ALL_DATA["IP_PROP74"] = 'Paksmet'
+    ALL_DATA["IP_PROP265"] = 'Россия'
+    IP_PROP_LIST["Привязка к бренду"] = "IP_PROP61"
+    ALL_DATA["IP_PROP61"] = 294
     if proposal:
         ALL_DATA['CV_PRICE_1'] = ''
         ALL_DATA['IE_NAME'] = ''
@@ -518,13 +525,17 @@ def parser(url, picture, proposal):
                                     item.find(class_='name').find(class_='size').text.split('x')[0].split('мм')[
                                         0].strip().split(
                                         ' ')[-1]
+                                IP_PROP_LIST_PROPOSAL['Высота, мм'] = 'IP_PROP71'
+                                item_dict['IP_PROP90'] += 'heigh' + item_dict['IP_PROP71']
                             elif 'х' in item.find(class_='name').find(class_='size').text:
                                 item_dict['IP_PROP71'] = \
                                     item.find(class_='name').find(class_='size').text.split('х')[0].split('мм')[
                                         0].strip().split(
                                         ' ')[-1]
-                            IP_PROP_LIST_PROPOSAL['Высота, мм'] = 'IP_PROP71'
-                            item_dict['IP_PROP90'] += 'heigh' + item_dict['IP_PROP71']
+                                IP_PROP_LIST_PROPOSAL['Высота, мм'] = 'IP_PROP71'
+                                item_dict['IP_PROP90'] += 'heigh' + item_dict['IP_PROP71']
+                            else:
+                                print(item.find(class_='name').find(class_='size').text)
                         except AttributeError:
                             try:
                                 if 'x' in item.find(class_='name').find('h3').text:
@@ -535,6 +546,12 @@ def parser(url, picture, proposal):
                                     item_dict['IP_PROP71'] = \
                                         item.find(class_='name').find('h3').text.split('х')[0].split('мм')[0].strip().split(
                                             ' ')[-1]
+                                else:
+                                    if 'см' in item.find(class_='name').find(class_='size').text:
+                                        item_dict['IP_PROP71'] = str(int(item.find(class_='name').find('h3').text.split('см')[0].strip()) * 10)
+                                    else:
+                                        item_dict['IP_PROP71'] = \
+                                            item.find(class_='name').find('h3').text.strip()
                                 IP_PROP_LIST_PROPOSAL['Высота, мм'] = 'IP_PROP71'
                                 item_dict['IP_PROP90'] += 'heigh' + item_dict['IP_PROP71']
                             except Exception as ex:
@@ -547,13 +564,17 @@ def parser(url, picture, proposal):
                                     item.find(class_='name').find(class_='size').text.split('x')[1].split('мм')[
                                         0].strip().split(
                                         ' ')[-1]
+                                IP_PROP_LIST_PROPOSAL['Ширина, мм'] = 'IP_PROP72'
+                                item_dict['IP_PROP90'] += 'width' + item_dict['IP_PROP72']
                             elif 'х' in item.find(class_='name').find(class_='size').text:
                                 item_dict['IP_PROP72'] = \
                                     item.find(class_='name').find(class_='size').text.split('х')[1].split('мм')[
                                         0].strip().split(
                                         ' ')[-1]
-                            IP_PROP_LIST_PROPOSAL['Ширина, мм'] = 'IP_PROP72'
-                            item_dict['IP_PROP90'] += 'width' + item_dict['IP_PROP72']
+                                IP_PROP_LIST_PROPOSAL['Ширина, мм'] = 'IP_PROP72'
+                                item_dict['IP_PROP90'] += 'width' + item_dict['IP_PROP72']
+                            else:
+                                pass
                         except AttributeError:
                             try:
                                 if 'x' in item.find(class_='name').find('h3').text:
@@ -574,13 +595,17 @@ def parser(url, picture, proposal):
                                     item.find(class_='name').find(class_='size').text.split('x')[2].split('мм')[
                                         0].strip().split(
                                         ' ')[-1]
+                                IP_PROP_LIST_PROPOSAL['Глубина, мм'] = 'IP_PROP73'
+                                item_dict['IP_PROP90'] += 'depth' + item_dict['IP_PROP73']
                             elif 'х' in item.find(class_='name').find(class_='size').text:
                                 item_dict['IP_PROP73'] = \
                                     item.find(class_='name').find(class_='size').text.split('х')[2].split('мм')[
                                         0].strip().split(
                                         ' ')[-1]
-                            IP_PROP_LIST_PROPOSAL['Глубина, мм'] = 'IP_PROP73'
-                            item_dict['IP_PROP90'] += 'depth' + item_dict['IP_PROP73']
+                                IP_PROP_LIST_PROPOSAL['Глубина, мм'] = 'IP_PROP73'
+                                item_dict['IP_PROP90'] += 'depth' + item_dict['IP_PROP73']
+                            else:
+                                pass
                         except AttributeError:
                             try:
                                 if 'x' in item.find(class_='name').find('h3').text:
@@ -727,7 +752,6 @@ def parser(url, picture, proposal):
                     IP_PROP_LIST['Глубина, мм'] = 'IP_PROP73'
                 except Exception:
                     ALL_DATA['IP_PROP73'] = ''
-    print(ALL_DATA)
     return ALL_DATA
 
 
@@ -814,8 +838,8 @@ for name in soup.find(class_='products-list').find_all('li'):
                 src = request.text
                 sub_soup = BeautifulSoup(src, "lxml")
                 for item in sub_soup.find_all(class_='product-item'):
-                    if not item.find(class_='name').text in ALL_PRODUCTS:
-                        ALL_PRODUCTS.add(item.find(class_='name').text)
+                    if not item.find(class_='product-header').find('a')['href'] in ALL_PRODUCTS:
+                        ALL_PRODUCTS.add(item.find(class_='product-header').find('a')['href'])
                         try:
                             PREVIEW_PICTURE = item.find('img')['src']
                         except Exception:
@@ -828,14 +852,14 @@ for name in soup.find(class_='products-list').find_all('li'):
         except Exception:
             pass
 
-    with open(f"data paksmet/product/products/{name.find('span').text}.csv", "w", encoding='utf-8', newline='') as file:
+    with open(f"data paksmet/product/products/{translit(name.find('span').text, language_code='ru', reversed=True)}.csv", "w", encoding='utf-8', newline='') as file:
         writer = csv.writer(file, delimiter=';')
         header_table = tuple(
             ['IE_XML_ID', 'IE_NAME', 'IE_PREVIEW_PICTURE', 'IE_PREVIEW_TEXT', 'IE_PREVIEW_TEXT_TYPE', 'IE_CODE',
              'IE_DETAIL_TEXT_TYPE', 'IE_DETAIL_PICTURE', 'IE_DETAIL_TEXT'] + IP_PROP_1 + list(IP_PROP_LIST.values()) + [
                 f"IC_GROUP{u}" for u in range(IC_GROUP_COUNT)] + ['CV_PRICE_1', 'CV_CURRENCY_1'])
         writer.writerow(header_table)
-    with open(f"data paksmet/product/products/{name.find('span').text}.csv", "a", encoding='utf-8', newline='') as file:
+    with open(f"data paksmet/product/products/{translit(name.find('span').text, language_code='ru', reversed=True)}.csv", "a", encoding='utf-8', newline='') as file:
         for item in all_data:
             for img in item['all_photo']:
                 for doc in item['documents']:
@@ -861,13 +885,13 @@ for name in soup.find(class_='products-list').find_all('li'):
                     except UnicodeEncodeError as ex:
                         print(ex)
     if proposal:
-        with open(f"data paksmet/product/proposals/{name.find('span').text}_purpose.csv", "w", encoding='utf-8',
+        with open(f"data paksmet/product/proposals/{translit(name.find('span').text, language_code='ru', reversed=True)}_proposal.csv", "w", encoding='utf-8',
                   newline='') as file:
             writer = csv.writer(file, delimiter=';')
             header_table = tuple(
                 ['IE_XML_ID', 'IE_NAME', 'IE_CODE'] + list(IP_PROP_LIST_PROPOSAL.values()) + ['CV_PRICE_1'])
             writer.writerow(header_table)
-        with open(f"data paksmet/product/proposals/{name.find('span').text}_purpose.csv", "a", encoding='utf-8',
+        with open(f"data paksmet/product/proposals/{translit(name.find('span').text, language_code='ru', reversed=True)}_proposal.csv", "a", encoding='utf-8',
                   newline='') as file:
             for product in all_data:
                 for item in product['proposal']:
