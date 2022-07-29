@@ -12,6 +12,7 @@ IP_PROP_1 += [f'IP_PROP{IP_PROP_DOC}']
 IP_PROP = 314
 IE_XML_ID = 329
 IP_PROP_ALL = {
+    "Привязка к бренду": "IP_PROP61",
     'Размеры внутренние, мм (ВхШхГ)': 'IP_PROP76',
     'Вес, кг': 'IP_PROP77',
     'Объём, л': 'IP_PROP75',
@@ -73,12 +74,15 @@ IP_PROP_ALL = {
     'Полозья': 'IP_PROP313',
 }
 ALL_PRODUCTS = set()
+ALL_DOCUMENTS = {}
 
-with open(f"data/documents/documents.csv", "w", encoding='windows-1251', newline='') as file:
-    writer = csv.writer(file, delimiter=';')
-    header_table = ('IE_XML_ID', 'IE_NAME', 'FILE NAME', 'URL')
-    writer.writerow(header_table)
-
+with open('data safe/documents/documents_обработа1.csv', 'r', encoding='utf-8') as f:
+    lines = f.readlines()
+for data_doc in lines:
+    data_doc = data_doc.split(';')
+    if not data_doc[1] == '\n':
+        ALL_DOCUMENTS[data_doc[0]] = data_doc[1].replace('\n', '')
+print(ALL_DOCUMENTS)
 
 def parser(name, pages):
     global IP_PROP_IMG, IP_PROP_1, IP_PROP_DOC, IP_PROP, IE_XML_ID, IP_PROP_ALL, ALL_PRODUCTS
@@ -105,6 +109,7 @@ def parser(name, pages):
             all_data[IE_NAME]['IC_GROUP_LIST'] = []
             url_product = 'https://www.safe.ru' + i.find(class_='tile-card__title')['href']
             all_data[IE_NAME]['IE_XML_ID'] = IE_XML_ID
+            print(IE_XML_ID)
             IE_XML_ID += 1
             all_data[IE_NAME]['IE_NAME'] = i.find(class_='tile-card__title').text
             try:
@@ -153,6 +158,8 @@ def parser(name, pages):
                     filter(None, map(unicode.strip, str(product_soup.find_all(class_='text-block')[0]).splitlines())))
             except Exception:
                 all_data[IE_NAME]['IE_DETAIL_TEXT'] = ''
+            IP_PROP_LIST["Привязка к бренду"] = "IP_PROP61"
+            all_data[IE_NAME]["IP_PROP61"] = 293
             for ipr in product_soup.find('table', {'id': 'table1'}).find_all('tr'):
                 if 'Размеры внешние, мм (ВхШхГ)' in ipr.find_all('td')[0].text:
                     IP_PROP_LIST['Высота, мм'] = "IP_PROP71"
@@ -197,59 +204,17 @@ def parser(name, pages):
             try:
                 for ipr in product_soup.find_all(class_='text-block')[1].find_all('a'):
                     try:
-                        testrequest = requests.get(f'https://www.safe.ru{ipr["href"]}')
-                        testsrc = testrequest.text
-                        testsoup = BeautifulSoup(testsrc, "lxml")
-                        if testsoup.title is None:
-                            all_data[IE_NAME]['documents'].append('https://yarskmebel.tmweb.ru/upload/docs/' + ipr.text + ' ' + IE_NAME + '.pdf')
-                            with open(f"data/documents/documents.csv", "a", encoding='windows-1251', newline='') as file:
-                                writer = csv.writer(file, delimiter=';')
-                                table_doc = (all_data[IE_NAME]['IE_XML_ID'], all_data[IE_NAME]['IE_NAME'], f'{ipr.text} {IE_NAME}.pdf', f'https://www.safe.ru{ipr["href"]}')
-                                writer.writerow(table_doc)
-                        else:
-                            print(IE_XML_ID - 1, 'Fake document!!!')
-                    except TooManyRedirects:
-                        print(IE_XML_ID - 1, 'Fake document!!!')
-                    except ConnectionError:
-                        print(IE_XML_ID - 1, 'Connection Error')
-            except UnicodeEncodeError:
-                pass
+                        data_name = ALL_DOCUMENTS[f'https://www.safe.ru{ipr["href"]}']
+                        data_name = data_name.replace('/', ':')
+                        data_name = data_name.replace('"', '_')
+                        data_name = data_name.replace(':', '-')
+                        all_data[IE_NAME]['documents'].append('/upload/docs/' + data_name)
+                    except KeyError:
+                        print(IE_XML_ID, 'Такого документа нет!')
             except Exception:
-                all_data[IE_NAME]['documents'].append('')
-                # if not testsoup.find(class_='container').find('h1').text == 'Страница не найдена':
-                #    #print("IF working")
-                #    all_data[IE_NAME]['documents'].append('https://yarskmebel.tmweb.ru/upload/docs/' + ipr.text + ' ' + IE_NAME + '.pdf')
-                #    with open(f"data/documents/documents.csv", "a", encoding='windows-1251', newline='') as file:
-                #        writer = csv.writer(file, delimiter=';')
-                #        table_doc = (all_data[IE_NAME]['IE_XML_ID'], all_data[IE_NAME]['IE_NAME'], f'{ipr.text} {IE_NAME}.pdf', f'https://www.safe.ru{ipr["href"]}')
-                #        writer.writerow(table_doc)
-                # else:
-                #    print(all_data[IE_NAME]['IE_XML_ID'], 'Fake document!!!!')
-                #
-                #
-                # except AttributeError:
-                #    #print('Attribute working')
-                #    all_data[IE_NAME]['documents'].append('https://yarskmebel.tmweb.ru/upload/docs/' + ipr.text + ' ' + IE_NAME + '.pdf')
-                #    with open(f"data/documents/documents.csv", "a", encoding='windows-1251', newline='') as file:
-                #        writer = csv.writer(file, delimiter=';')
-                #        table_doc = (
-                #        all_data[IE_NAME]['IE_XML_ID'], all_data[IE_NAME]['IE_NAME'], f'{ipr.text} {IE_NAME}.pdf',
-                #        f'https://www.safe.ru{ipr["href"]}')
-                #        writer.writerow(table_doc)
-                # except TooManyRedirects:
-                #    print(all_data[IE_NAME]['IE_XML_ID'], 'Fake document!!!!')
-                # except Exception:
-                #    all_data[IE_NAME]['documents'].append('https://yarskmebel.tmweb.ru/upload/docs/' + ipr.text + ' ' + IE_NAME + '.pdf')
-                #    with open(f"data/documents/documents.csv", "a", encoding='windows-1251', newline='') as file:
-                #        writer = csv.writer(file, delimiter=';')
-                #        table_doc = (
-                #        all_data[IE_NAME]['IE_XML_ID'], all_data[IE_NAME]['IE_NAME'], f'{ipr.text} {IE_NAME}.pdf',
-                #        f'https://www.safe.ru{ipr["href"]}')
-                #        writer.writerow(table_doc)
-            # except IndexError:
-            #    all_data[IE_NAME]['documents'].append('')
-            # except UnicodeEncodeError:
-            #    pass
+                pass
+            if not all_data[IE_NAME]['documents']:
+                all_data[IE_NAME]['documents'] = ['']
             try:
                 for gr in product_soup.find_all('li', class_='b-breadcrumbs-item')[:-1]:
                     gri = ''.join(filter(None, map(unicode.strip, gr.text.splitlines())))
@@ -260,14 +225,14 @@ def parser(name, pages):
             IC_GROUP_COUNT = max(IC_GROUP_COUNT, IC_GROUP)
             # time.sleep(1 + random.random())
 
-    with open(f"data/{name}.csv", "w", encoding='windows-1251', newline='') as file:
+    with open(f"data safe/products/{name}_utf-8.csv", "w", encoding='utf-8', newline='') as file:
         writer = csv.writer(file, delimiter=';')
         header_table = tuple(
             ['IE_XML_ID', 'IE_NAME', 'IE_PREVIEW_PICTURE', 'IE_PREVIEW_TEXT', 'IE_PREVIEW_TEXT_TYPE', 'IE_CODE',
              'IE_DETAIL_TEXT_TYPE', 'IE_DETAIL_PICTURE', 'IE_DETAIL_TEXT'] + IP_PROP_1 + list(IP_PROP_LIST.values()) + [
                 f"IC_GROUP{u}" for u in range(IC_GROUP_COUNT)] + ['CV_PRICE_1', 'CV_CURRENCY_1'])
         writer.writerow(header_table)
-    with open(f"data/{name}.csv", "a", encoding='windows-1251', newline='') as file:
+    with open(f"data safe/products/{name}_utf-8.csv", "a", encoding='utf-8', newline='') as file:
         for key, item in all_data.items():
             for img in item['all_photo']:
                 for doc in item['documents']:
