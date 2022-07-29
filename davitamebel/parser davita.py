@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import requests, csv
 from bs4 import BeautifulSoup
 from lxml.builder import unicode
@@ -7,11 +8,12 @@ import random
 
 IP_PROP_IMG = 59
 IP_PROP_1 = [f'IP_PROP{IP_PROP_IMG}']
-#IP_PROP_DOC = 64
-#IP_PROP_1 += [f'IP_PROP{IP_PROP_DOC}']
+IP_PROP_DOC = 64
+IP_PROP_1 += [f'IP_PROP{IP_PROP_DOC}']
 IP_PROP = 319
 IE_XML_ID = 1911
 IP_PROP_ALL = {
+    "Привязка к бренду": "IP_PROP61",
     "Размеры внутренние, мм (ВхШхГ)": "IP_PROP76",
     "Вес, кг": "IP_PROP77",
     "Объём, л": "IP_PROP75",
@@ -87,20 +89,24 @@ def parser(name, pages):
     all_data = {}
     IP_PROP_LIST = {}
     IC_GROUP_COUNT = 0
+    IC_GROUP_LIST = ['Офисная мебель']
     for num in range(1, pages):
         url = f'https://davitamebel.ru/catalog/ofisnaja-mebel/{name}/?PAGEN_3={num}'
         request = requests.get(url)
         src = request.text
         soup = BeautifulSoup(src, "lxml")
+        if not soup.find(class_='section-headers').text.strip() in IC_GROUP_LIST:
+            IC_GROUP_LIST.append(soup.find(class_='section-headers').text.strip())
         print(f"Page {num}")
         for i in soup.find_all(class_='catalog-element'):
             try:
-                IE_NAME = i.find('strong').text
+                IE_NAME = i.find(class_='title').text.strip()
             except Exception:
                 continue
             IC_GROUP = 0
             all_data[IE_NAME] = {}
             all_data[IE_NAME]['all_photo'] = []
+            all_data[IE_NAME]['documents'] = []
             all_data[IE_NAME]['IC_GROUP_LIST'] = []
             url_product = 'https://davitamebel.ru' + i.find(class_='title').find('a')['href']
             print(IE_NAME, url_product)
@@ -118,25 +124,38 @@ def parser(name, pages):
             card_request = requests.get(url_product)
             product_soup = BeautifulSoup(card_request.text, 'lxml')
             try:
-                all_data[IE_NAME]['CV_PRICE_1'] = product_soup.find(class_='old-price').text[:-2]
+                doc_request = requests.get(f"{url_product}?ajax_q=Y&tab=instruction")
+                doc_soup = BeautifulSoup(doc_request.text, "lxml")
+                all_data[IE_NAME]['documents'] = ['https://davitamebel.ru' + i['href'] for i in doc_soup.find_all('a')]
+                print(all_data[IE_NAME]['documents'])
+            except Exception:
+                all_data[IE_NAME]['documents'] = ['']
+            if not all_data[IE_NAME]['documents']:
+                all_data[IE_NAME]['documents'] = ['']
+            try:
+                all_data[IE_NAME]['CV_PRICE_1'] = ' '.join([i.strip() for i in product_soup.find(class_='old-price').text[:-2].split()])
             except Exception:
                 all_data[IE_NAME]['CV_PRICE_1'] = ''
             all_data[IE_NAME]['CV_CURRENCY_1'] = 'RUB'
             try:
-                all_data[IE_NAME]['IE_DETAIL_PICTURE'] = 'https://davitamebel.ru' + \
-                                                     product_soup.find('img', class_='big-photo')['src']
+                for img in product_soup.find(class_='big-photos').find_all('img')[:]:
+                    all_data[IE_NAME]['all_photo'].append('https://davitamebel.ru' + img['data-big'])
+                all_data[IE_NAME]['IE_DETAIL_PICTURE'] = all_data[IE_NAME]['all_photo'][0]
+                del all_data[IE_NAME]['all_photo'][0]
             except Exception:
+                all_data[IE_NAME]['all_photo'] = ['']
                 all_data[IE_NAME]['IE_DETAIL_PICTURE'] = ''
             try:
-                for img in product_soup.find(class_='big-photos').find_all('img')[1:]:
-                    all_data[IE_NAME]['all_photo'].append('https://davitamebel.ru' + img['src'])
-            except Exception:
-                pass
-            try:
                 all_data[IE_NAME]['IE_DETAIL_TEXT'] = ''.join(
-                    filter(None, map(unicode.strip, str(product_soup.find_all(class_='p')[0]).splitlines())))
+                    filter(None, map(unicode.strip, str(product_soup.find_all(class_='p')[0]).splitlines()))).replace('<font size="3">', '').replace('</font>', '').replace('p html-content', 'text-block').replace('itemprop="description"', '')
             except Exception:
                 all_data[IE_NAME]['IE_DETAIL_TEXT'] = ''
+            IP_PROP_LIST["Производитель"] = "IP_PROP74"
+            IP_PROP_LIST["Страна"] = "IP_PROP265"
+            all_data[IE_NAME]["IP_PROP74"] = 'Davita'
+            all_data[IE_NAME]["IP_PROP265"] = 'Россия'
+            IP_PROP_LIST["Привязка к бренду"] = "IP_PROP61"
+            all_data[IE_NAME]["IP_PROP61"] = 295
             for ipr in product_soup.find('table', class_='product-properties').find_all('tr'):
                 if 'Размеры, мм' in ipr.find_all('td')[0].text:
                     delimiter = 'x'
@@ -172,47 +191,43 @@ def parser(name, pages):
                     IP_PROP += 1
                     all_data[IE_NAME][IP_PROP_LIST[ipr.find_all('td')[0].text]] = ipr.find_all('td')[1].text
             try:
-                #print(product_soup.find_all('li', class_='breadcrumbs'))
-                for gr in product_soup.find('ul', class_='breadcrumbs').find_all('li')[:-1]:
-                    gri = ''.join(filter(None, map(unicode.strip, gr.find(class_='text').text.splitlines())))
-                    all_data[IE_NAME]['IC_GROUP_LIST'].append(gri)
-                    IC_GROUP += 1
+                all_data[IE_NAME]['IC_GROUP_LIST'] = IC_GROUP_LIST
+                IC_GROUP = len(IC_GROUP_LIST)
             except Exception:
                 pass
             IC_GROUP_COUNT = max(IC_GROUP_COUNT, IC_GROUP)
-            #print(all_data[IE_NAME]['CV_PRICE_1'])
 
     with open(f"data davita/{name}_utf-8.csv", "w", encoding='utf-8', newline='') as file:
         writer = csv.writer(file, delimiter=';')
         header_table = tuple(
-            ['IE_XML_ID', 'IE_NAME', 'IE_PREVIEW_PICTURE', 'IE_PREVIEW_TEXT', 'IE_PREVIEW_TEXT_TYPE', 'IE_CODE',
-             'IE_DETAIL_TEXT_TYPE', 'IE_DETAIL_PICTURE', 'IE_DETAIL_TEXT'] + IP_PROP_1 + list(IP_PROP_LIST.values()) + [
+            ['IE_XML_ID', 'IE_NAME', 'IE_PREVIEW_PICTURE', 'IE_PREVIEW_TEXT', 'IE_PREVIEW_TEXT_TYPE', 'IE_CODE', 'IE_DETAIL_PICTURE',
+             'IE_DETAIL_TEXT_TYPE', 'IE_DETAIL_TEXT'] + IP_PROP_1 + list(IP_PROP_LIST.values()) + [
                 f"IC_GROUP{u}" for u in range(IC_GROUP_COUNT)] + ['CV_PRICE_1', 'CV_CURRENCY_1'])
         writer.writerow(header_table)
     with open(f"data davita/{name}_utf-8.csv", "a", encoding='utf-8', newline='') as file:
         for key, item in all_data.items():
             for img in item['all_photo']:
-                try:
-                    table_list = [item['IE_XML_ID'], item['IE_NAME'], item['IE_PREVIEW_PICTURE'],
-                                  item['IE_PREVIEW_TEXT'],
-                                  item['IE_PREVIEW_TEXT_TYPE'], item['IE_CODE'], item['IE_DETAIL_TEXT_TYPE'],
-                                  item['IE_DETAIL_PICTURE'], item['IE_DETAIL_TEXT'], img]
-                    for ip in IP_PROP_LIST.values():
-                        if ip in item.keys():
-                            table_list.append(item[ip])
-                        else:
-                            table_list.append('')
-                    for n in range(IC_GROUP_COUNT):
-                        if n < len(item['IC_GROUP_LIST']):
-                            table_list.append(item['IC_GROUP_LIST'][n])
-                        else:
-                            table_list.append('')
-                    table_list.append(item['CV_PRICE_1'])
-                    table_list.append(item['CV_CURRENCY_1'])
-                    writer = csv.writer(file, delimiter=';')
-                    writer.writerow(tuple(table_list))
-                except UnicodeEncodeError:
-                    pass
+                for doc in item['documents']:
+                    try:
+                        table_list = [item['IE_XML_ID'], item['IE_NAME'], item['IE_PREVIEW_PICTURE'],
+                                      item['IE_PREVIEW_TEXT'],
+                                      item['IE_PREVIEW_TEXT_TYPE'], item['IE_CODE'],item['IE_DETAIL_PICTURE'], item['IE_DETAIL_TEXT_TYPE'], item['IE_DETAIL_TEXT'], img, doc]
+                        for ip in IP_PROP_LIST.values():
+                            if ip in item.keys():
+                                table_list.append(item[ip])
+                            else:
+                                table_list.append('')
+                        for n in range(IC_GROUP_COUNT):
+                            if n < len(item['IC_GROUP_LIST']):
+                                table_list.append(item['IC_GROUP_LIST'][n])
+                            else:
+                                table_list.append('')
+                        table_list.append(item['CV_PRICE_1'])
+                        table_list.append(item['CV_CURRENCY_1'])
+                        writer = csv.writer(file, delimiter=';')
+                        writer.writerow(tuple(table_list))
+                    except UnicodeEncodeError:
+                        pass
     print(IE_XML_ID - 1911)
 
 parser('nabory_ofisnoy_mebeli_1', 5)
