@@ -9,10 +9,9 @@ IP_PROP_IMG = 59
 IP_PROP_1 = [f'IP_PROP{IP_PROP_IMG}']
 IP_PROP_DOC = 64
 IP_PROP_1 += [f'IP_PROP{IP_PROP_DOC}']
-IP_PROP = 325
+IP_PROP = 363
 IE_XML_ID = 2661
 IP_PROP_ALL = {
-    "Привязка к бренду": "IP_PROP61",
     "Размеры внутренние, мм (ВхШхГ)": "IP_PROP76",
     "Вес, кг": "IP_PROP77",
     "Объём, л": "IP_PROP75",
@@ -86,9 +85,49 @@ IP_PROP_ALL = {
     "Количество упаковок, шт": "IP_PROP322",
     "Выдвижной ящик под столешницей": "IP_PROP323",
     "IE_XML_ID товара": "IP_PROP91",
-    'Комплектация': 'IP_PROP324'
+    "Комплектация": "IP_PROP324",
+    "Cрок службы": "IP_PROP325",
+    "Толщина полки-фанеры": "IP_PROP326",
+    "Ребро жесткости позволяет увеличить максимальную нагрузку на полку МС": "IP_PROP327",
+    "В инструментальный шкаф можно установить": "IP_PROP328",
+    "Навеcные элементы": "IP_PROP329",
+    "Конструкция": "IP_PROP330",
+    "Мойка": "IP_PROP331",
+    "Наличие борта": "IP_PROP332",
+    "Ножки": "IP_PROP333",
+    "Обвязка": "IP_PROP334",
+    "Отверстие под смеситель": "IP_PROP335",
+    "Регулируемость опоры по высоте (max мм)": "IP_PROP336",
+    "Тип опоры": "IP_PROP337",
+    "В комплекте": "IP_PROP338",
+    "Размер раковины (ДхШхВ, мм)": "IP_PROP339",
+    "Упаковка (длина, мм)": "IP_PROP340",
+    "Упаковка (ширина, мм)": "IP_PROP341",
+    "Упаковка (вес брутто, кг)": "IP_PROP342",
+    "Упаковка (высота, мм)": "IP_PROP343",
+    "Вес (нетто, кг)": "IP_PROP344",
+    "Упаковка (объем, м. куб.)": "IP_PROP345",
+    "Материал столешницы": "IP_PROP346",
+    "Материал корпуса": "IP_PROP347",
+    "Тип крепления": "IP_PROP348",
+    "Высота борта (мм)": "IP_PROP349",
+    "Макс. нагрузка (до, кг)": "IP_PROP350",
+    "Усиление": "IP_PROP351",
+    "Тип полок": "IP_PROP352",
+    "Материал полки": "IP_PROP353",
+    "Тип дверок": "IP_PROP354",
+    "Тип стеллажа": "IP_PROP355",
 }
 ALL_PRODUCTS = set()
+IP_PROP_ALL_PROPOSAL = {
+    "Высота, мм": "IP_PROP359",
+    "Ширина, мм": "IP_PROP360",
+    "Глубина, мм": "IP_PROP361",
+    "IE_XML_ID товара": "IP_PROP358",
+    "Комплектация": "IP_PROP357",
+    "Вес, кг": "IP_PROP362",
+    'Артикул предложения': 'IP_PROP356'
+}
 
 with open(f"data paksmet/documents/documents.csv", "w", encoding='windows-1251', newline='') as file:
     writer = csv.writer(file, delimiter=';')
@@ -137,6 +176,7 @@ def parser(url, picture, proposal):
             filter(None, map(unicode.strip, soup.find(class_='card-product__title').text.splitlines())))
     except Exception:
         PRE_NAME = f'No name{ALL_DATA["IE_XML_ID"]}'
+    print(PRE_NAME)
     try:
         for doc in soup.find(class_='instructions__grid-wrap').find_all(
                 class_='instructions__col instructions__dowload-file'):
@@ -148,7 +188,6 @@ def parser(url, picture, proposal):
     except Exception as ex:
         ALL_DATA['documents'] = ['']
     if not ALL_DATA['documents']:
-        print(ALL_DATA['documents'])
         ALL_DATA['documents'] = ['']
     IP_PROP_LIST["Производитель"] = "IP_PROP74"
     IP_PROP_LIST["Страна"] = "IP_PROP265"
@@ -158,7 +197,7 @@ def parser(url, picture, proposal):
     ALL_DATA["IP_PROP61"] = 294
     if proposal:
         ALL_DATA['CV_PRICE_1'] = ''
-        ALL_DATA['IE_NAME'] = ''
+        ALL_DATA['IE_NAME'] = PRE_NAME
         ALL_DATA['proposal'] = []
         ALL_DATA['IE_CODE'] = ''
         if not soup.find(class_='product-attributes') is None:
@@ -169,11 +208,12 @@ def parser(url, picture, proposal):
                 for p in soup.find(class_='field_content').find_all('p'):
                     description = p.text
                     if not ':' in p.find('span').text or p.text == p.find('span').text:
+                        ALL_DATA['IE_DETAIL_TEXT'] += p.find('span').text.strip()
                         continue
                     description_name, description_text = description.split(':')[0], description.split(':', 1)[1]
                     nameindesc = False
                     for i in all_name:
-                        if i in description_name:
+                        if i in description_name or ''.join(i.replace('комплект №').split()[:-1]) in description_name:
                             nameindesc = True
                     if not ('азмер' in description_name or nameindesc or (IC_GROUP_LIST[0] in ['Металлические стеллажи',
                                                                                                'Верстаки и Инструментальные шкафы'] and 'омплектаци' in description_name) or '<br>' in str(p) or 'В инструментальный шкаф' in description_name):
@@ -227,9 +267,9 @@ def parser(url, picture, proposal):
                             filter(None, map(unicode.strip, item_soup.find(class_='price').text.splitlines())))[:-3]
                     except Exception:
                         item_dict['CV_PRICE_1'] = ''
-                    IP_PROP_LIST_PROPOSAL['IE_XML_ID товара'] = 'IP_PROP91'
+                    IP_PROP_LIST_PROPOSAL['IE_XML_ID товара'] = 'IP_PROP358'
                     IP_PROP_LIST_PROPOSAL['Товарное предложение'] = 'IP_PROP90'
-                    item_dict['IP_PROP91'] = ALL_DATA['IE_XML_ID']
+                    item_dict['IP_PROP358'] = ALL_DATA['IE_XML_ID']
                     item_dict['IP_PROP90'] = ''
                     try:
                         for p in item_soup.find(class_='field_content').find_all('p'):
@@ -241,11 +281,11 @@ def parser(url, picture, proposal):
                             #print(description_name, description_text)
                             if IC_GROUP_LIST[0] in ['Металлические стеллажи', 'Верстаки и Инструментальные шкафы'] and 'омплектаци' in description_name:
                                 if IE_SUBNAME in description_name:
-                                    item_dict[IP_PROP_ALL['Комплектация']] = description_text
-                                    IP_PROP_LIST_PROPOSAL['Комплектация'] = IP_PROP_ALL['Комплектация']
+                                    item_dict[IP_PROP_ALL_PROPOSAL['Комплектация']] = description_text
+                                    IP_PROP_LIST_PROPOSAL['Комплектация'] = IP_PROP_ALL_PROPOSAL['Комплектация']
                                 elif not '<br>' in str(p) and description_name == 'Комплектация':
-                                    item_dict[IP_PROP_ALL['Комплектация']] = description_text
-                                    IP_PROP_LIST_PROPOSAL['Комплектация'] = IP_PROP_ALL['Комплектация']
+                                    item_dict[IP_PROP_ALL_PROPOSAL['Комплектация']] = description_text
+                                    IP_PROP_LIST_PROPOSAL['Комплектация'] = IP_PROP_ALL_PROPOSAL['Комплектация']
                             if 'азмер' in description_name:
                                 if '/' in description_name.replace(IE_SUBNAME.replace('для', '').replace('/n', '').strip(), ''):
                                     if ALL_DATA['IE_XML_ID'] == 2689:
@@ -257,101 +297,92 @@ def parser(url, picture, proposal):
                                         if 'азмер' in description_name_ind:
                                             try:
                                                 if 'x' in description_text_ind:
-                                                    item_dict['IP_PROP71'] = \
+                                                    item_dict['IP_PROP359'] = \
                                                         description_text_ind.split('x')[0].split('мм')[0].strip().split(
                                                             ' ')[-1]
                                                 elif 'х' in description_text_ind:
-                                                    item_dict['IP_PROP71'] = \
+                                                    item_dict['IP_PROP359'] = \
                                                         description_text_ind.split('х')[0].split('мм')[0].strip().split(
                                                             ' ')[-1]
-                                                IP_PROP_LIST_PROPOSAL['Высота, мм'] = 'IP_PROP71'
-                                                item_dict['IP_PROP90'] += 'heigh' + item_dict['IP_PROP71']
+                                                IP_PROP_LIST_PROPOSAL['Высота, мм'] = 'IP_PROP359'
+                                                item_dict['IP_PROP90'] += 'heigh' + item_dict['IP_PROP359']
                                             except Exception:
-                                                item_dict['IP_PROP71'] = ''
+                                                item_dict['IP_PROP359'] = ''
                                             try:
                                                 if 'x' in description_text_ind:
-                                                    item_dict['IP_PROP72'] = \
+                                                    item_dict['IP_PROP360'] = \
                                                         description_text_ind.split('x')[1].split('мм')[0].strip().split(
                                                             ' ')[-1]
                                                 elif 'х' in description_text_ind:
-                                                    item_dict['IP_PROP72'] = \
+                                                    item_dict['IP_PROP360'] = \
                                                         description_text_ind.split('х')[1].split('мм')[0].strip().split(
                                                             ' ')[-1]
-                                                IP_PROP_LIST_PROPOSAL['Ширина, мм'] = 'IP_PROP72'
-                                                item_dict['IP_PROP90'] += 'width' + item_dict['IP_PROP72']
+                                                IP_PROP_LIST_PROPOSAL['Ширина, мм'] = 'IP_PROP360'
+                                                item_dict['IP_PROP90'] += 'width' + item_dict['IP_PROP360']
                                             except Exception:
-                                                item_dict['IP_PROP72'] = ''
+                                                item_dict['IP_PROP360'] = ''
                                             try:
                                                 if 'x' in description_text_ind:
-                                                    item_dict['IP_PROP73'] = \
+                                                    item_dict['IP_PROP361'] = \
                                                         description_text_ind.split('x')[2].split('мм')[0].strip().split(
                                                             ' ')[-1]
                                                 elif 'х' in description_text_ind:
-                                                    item_dict['IP_PROP73'] = \
+                                                    item_dict['IP_PROP361'] = \
                                                         description_text_ind.split('х')[2].split('мм')[0].strip().split(
                                                             ' ')[-1]
-                                                IP_PROP_LIST_PROPOSAL['Глубина, мм'] = 'IP_PROP73'
-                                                item_dict['IP_PROP90'] += 'depth' + item_dict['IP_PROP73']
+                                                IP_PROP_LIST_PROPOSAL['Глубина, мм'] = 'IP_PROP361'
+                                                item_dict['IP_PROP90'] += 'depth' + item_dict['IP_PROP361']
                                             except Exception:
-                                                item_dict['IP_PROP73'] = ''
+                                                item_dict['IP_PROP361'] = ''
                                         if 'Вес' in description_name_ind:
-                                            item_dict['IP_PROP77'] = description_text_ind.split()[0]
-                                            IP_PROP_LIST_PROPOSAL['Вес, кг'] = 'IP_PROP77'
+                                            item_dict['IP_PROP362'] = description_text_ind.split()[0]
+                                            IP_PROP_LIST_PROPOSAL['Вес, кг'] = 'IP_PROP362'
+                                            item_dict['IP_PROP90'] += 'weight' + item_dict['IP_PROP362']
                                 else:
                                     try:
                                         if 'x' in description_text:
-                                            item_dict['IP_PROP71'] = \
+                                            item_dict['IP_PROP359'] = \
                                                 description_text.split('x')[0].split('мм')[0].strip().split(
                                                     ' ')[-1]
                                         elif 'х' in description_text:
-                                            item_dict['IP_PROP71'] = \
+                                            item_dict['IP_PROP359'] = \
                                                 description_text.split('х')[0].split('мм')[0].strip().split(
                                                     ' ')[-1]
                                         else:
-                                            item_dict['IP_PROP71'] = \
+                                            item_dict['IP_PROP359'] = \
                                                 description_text.split('мм')[0].strip().split(
                                                     ' ')[-1]
-                                        IP_PROP_LIST_PROPOSAL['Высота, мм'] = 'IP_PROP71'
-                                        item_dict['IP_PROP90'] += 'heigh' + item_dict['IP_PROP71']
+                                        IP_PROP_LIST_PROPOSAL['Высота, мм'] = 'IP_PROP359'
+                                        item_dict['IP_PROP90'] += 'heigh' + item_dict['IP_PROP359']
                                     except Exception as ex:
-                                        print(ex)
-                                        item_dict['IP_PROP71'] = ''
+                                        print("EEEEEEEEEEERROR", ex)
+                                        item_dict['IP_PROP359'] = ''
                                     try:
                                         if 'x' in description_text:
-                                            item_dict['IP_PROP72'] = \
+                                            item_dict['IP_PROP360'] = \
                                                 description_text.split('x')[1].split('мм')[0].strip().split(
                                                     ' ')[-1]
                                         elif 'х' in description_text:
-                                            item_dict['IP_PROP72'] = \
+                                            item_dict['IP_PROP360'] = \
                                                 description_text.split('х')[1].split('мм')[0].strip().split(
                                                     ' ')[-1]
-                                        IP_PROP_LIST_PROPOSAL['Ширина, мм'] = 'IP_PROP72'
-                                        item_dict['IP_PROP90'] += 'width' + item_dict['IP_PROP72']
+                                        IP_PROP_LIST_PROPOSAL['Ширина, мм'] = 'IP_PROP360'
+                                        item_dict['IP_PROP90'] += 'width' + item_dict['IP_PROP360']
                                     except Exception:
-                                        item_dict['IP_PROP72'] = ''
+                                        item_dict['IP_PROP360'] = ''
                                     try:
                                         if 'x' in description_text:
-                                            item_dict['IP_PROP73'] = \
+                                            item_dict['IP_PROP361'] = \
                                                 description_text.split('x')[2].split('мм')[0].strip().split(
                                                     ' ')[-1]
                                         elif 'х' in description_text:
-                                            item_dict['IP_PROP73'] = \
+                                            item_dict['IP_PROP361'] = \
                                                 description_text.split('х')[2].split('мм')[0].strip().split(
                                                     ' ')[-1]
-                                        IP_PROP_LIST_PROPOSAL['Глубина, мм'] = 'IP_PROP73'
-                                        item_dict['IP_PROP90'] += 'depth' + item_dict['IP_PROP73']
+                                        IP_PROP_LIST_PROPOSAL['Глубина, мм'] = 'IP_PROP361'
+                                        item_dict['IP_PROP90'] += 'depth' + item_dict['IP_PROP361']
                                     except Exception:
-                                        item_dict['IP_PROP73'] = ''
-                            #elif IC_GROUP_LIST[0] in ['Металлические стеллажи',
-                            #                          'Верстаки и Инструментальные шкафы'] and 'омплектаци' in description_name:
-                            #    if description_name in IP_PROP_ALL.keys():
-                            #        IP_PROP_LIST_PROPOSAL[description_name] = IP_PROP_ALL[description_name]
-                            #        ALL_DATA[IP_PROP_ALL[description_name]] = description_text.strip()
-                            #    else:
-                            #        IP_PROP_ALL[description_name] = f"IP_PROP{IP_PROP}"
-                            #        IP_PROP += 1
-                            #        IP_PROP_LIST[description_name] = IP_PROP_ALL[description_name]
-                            #        ALL_DATA[IP_PROP_ALL[description_name]] = description_text.strip()
+                                        item_dict['IP_PROP361'] = ''
                     except Exception:
                            pass
                     ALL_DATA["proposal"].append(item_dict)
@@ -371,9 +402,9 @@ def parser(url, picture, proposal):
                             0].strip()
                     except Exception:
                         item_dict['CV_PRICE_1'] = ''
-                    item_dict['IP_PROP91'] = ALL_DATA['IE_XML_ID']
+                    item_dict['IP_PROP358'] = ALL_DATA['IE_XML_ID']
                     item_dict['IP_PROP90'] = ''
-                    IP_PROP_LIST_PROPOSAL['IE_XML_ID товара'] = 'IP_PROP91'
+                    IP_PROP_LIST_PROPOSAL['IE_XML_ID товара'] = 'IP_PROP358'
                     IP_PROP_LIST_PROPOSAL['Товарное предложение'] = 'IP_PROP90'
                     for p in soup.find(class_='field_content').find_all('p'):
                         description = p.text
@@ -386,14 +417,15 @@ def parser(url, picture, proposal):
                         if IC_GROUP_LIST[0] in ['Металлические стеллажи',
                                                 'Верстаки и Инструментальные шкафы'] and 'омплектаци' in description_name:
                             if IE_SUBNAME in description_name:
-                                item_dict[IP_PROP_ALL['Комплектация']] = description_text
-                                IP_PROP_LIST_PROPOSAL['Комплектация'] = IP_PROP_ALL['Комплектация']
+                                item_dict[IP_PROP_ALL_PROPOSAL['Комплектация']] = description_text
+                                IP_PROP_LIST_PROPOSAL['Комплектация'] = IP_PROP_ALL_PROPOSAL['Комплектация']
                             elif not '<br>' in str(p) and description_name == 'Комплектация':
-                                item_dict[IP_PROP_ALL['Комплектация']] = description_text
-                                IP_PROP_LIST_PROPOSAL['Комплектация'] = IP_PROP_ALL['Комплектация']
+                                item_dict[IP_PROP_ALL_PROPOSAL['Комплектация']] = description_text
+                                IP_PROP_LIST_PROPOSAL['Комплектация'] = IP_PROP_ALL_PROPOSAL['Комплектация']
                         if 'азмер' in description_name:
                             if '/' in description_name.replace(IE_SUBNAME.replace('для', '').replace('/n', '').strip(),
                                                                ''):
+
                                 if ALL_DATA['IE_XML_ID'] == 2689:
                                     description_text = \
                                         [i.strip() for i in description_text.split('\n') if i.strip() != ''][-1]
@@ -403,93 +435,95 @@ def parser(url, picture, proposal):
                                     if 'азмер' in description_name_ind:
                                         try:
                                             if 'x' in description_text_ind:
-                                                item_dict['IP_PROP71'] = \
+                                                item_dict['IP_PROP359'] = \
                                                     description_text_ind.split('x')[0].split('мм')[0].strip().split(
                                                         ' ')[-1]
                                             elif 'х' in description_text_ind:
-                                                item_dict['IP_PROP71'] = \
+                                                item_dict['IP_PROP359'] = \
                                                     description_text_ind.split('х')[0].split('мм')[0].strip().split(
                                                         ' ')[-1]
-                                            IP_PROP_LIST_PROPOSAL['Высота, мм'] = 'IP_PROP71'
-                                            item_dict['IP_PROP90'] += 'heigh' + item_dict['IP_PROP71']
+                                            IP_PROP_LIST_PROPOSAL['Высота, мм'] = 'IP_PROP359'
+                                            item_dict['IP_PROP90'] += 'heigh' + item_dict['IP_PROP359']
                                         except Exception:
-                                            item_dict['IP_PROP71'] = ''
+                                            item_dict['IP_PROP359'] = ''
                                         try:
                                             if 'x' in description_text_ind:
-                                                item_dict['IP_PROP72'] = \
+                                                item_dict['IP_PROP360'] = \
                                                     description_text_ind.split('x')[1].split('мм')[0].strip().split(
                                                         ' ')[-1]
                                             elif 'х' in description_text_ind:
-                                                item_dict['IP_PROP72'] = \
+                                                item_dict['IP_PROP360'] = \
                                                     description_text_ind.split('х')[1].split('мм')[0].strip().split(
                                                         ' ')[-1]
-                                            IP_PROP_LIST_PROPOSAL['Ширина, мм'] = 'IP_PROP72'
-                                            item_dict['IP_PROP90'] += 'width' + item_dict['IP_PROP72']
+                                            IP_PROP_LIST_PROPOSAL['Ширина, мм'] = 'IP_PROP360'
+                                            item_dict['IP_PROP90'] += 'width' + item_dict['IP_PROP360']
                                         except Exception:
-                                            item_dict['IP_PROP72'] = ''
+                                            item_dict['IP_PROP360'] = ''
                                         try:
                                             if 'x' in description_text_ind:
-                                                item_dict['IP_PROP73'] = \
+                                                item_dict['IP_PROP361'] = \
                                                     description_text_ind.split('x')[2].split('мм')[0].strip().split(
                                                         ' ')[-1]
                                             elif 'х' in description_text_ind:
-                                                item_dict['IP_PROP73'] = \
+                                                item_dict['IP_PROP361'] = \
                                                     description_text_ind.split('х')[2].split('мм')[0].strip().split(
                                                         ' ')[-1]
-                                            IP_PROP_LIST_PROPOSAL['Глубина, мм'] = 'IP_PROP73'
-                                            item_dict['IP_PROP90'] += 'depth' + item_dict['IP_PROP73']
+                                            IP_PROP_LIST_PROPOSAL['Глубина, мм'] = 'IP_PROP361'
+                                            item_dict['IP_PROP90'] += 'depth' + item_dict['IP_PROP361']
                                         except Exception:
-                                            item_dict['IP_PROP73'] = ''
+                                            item_dict['IP_PROP361'] = ''
                                     if 'Вес' in description_name_ind:
-                                        item_dict['IP_PROP77'] = description_text_ind.split()[0]
-                                        IP_PROP_LIST_PROPOSAL['Вес, кг'] = 'IP_PROP77'
+                                        item_dict['IP_PROP362'] = description_text_ind.split()[0]
+                                        IP_PROP_LIST_PROPOSAL['Вес, кг'] = 'IP_PROP362'
+                                        item_dict['IP_PROP90'] += 'weight' + item_dict['IP_PROP362']
                             else:
                                 try:
                                     if 'x' in description_text:
-                                        item_dict['IP_PROP71'] = \
+                                        item_dict['IP_PROP359'] = \
                                             description_text.split('x')[0].split('мм')[0].strip().split(
                                                 ' ')[-1]
                                     elif 'х' in description_text:
-                                        item_dict['IP_PROP71'] = \
+                                        item_dict['IP_PROP359'] = \
                                             description_text.split('х')[0].split('мм')[0].strip().split(
                                                 ' ')[-1]
                                     else:
-                                        item_dict['IP_PROP71'] = \
+                                        item_dict['IP_PROP359'] = \
                                             description_text.split('мм')[0].strip().split(
                                                 ' ')[-1]
-                                    IP_PROP_LIST_PROPOSAL['Высота, мм'] = 'IP_PROP71'
-                                    item_dict['IP_PROP90'] += 'heigh' + item_dict['IP_PROP71']
+                                    IP_PROP_LIST_PROPOSAL['Высота, мм'] = 'IP_PROP359'
+                                    item_dict['IP_PROP90'] += 'heigh' + item_dict['IP_PROP359']
                                 except Exception as ex:
-                                    print(ex)
-                                    item_dict['IP_PROP71'] = ''
+                                    print('EEEEEEEEEEERROR', ex)
+                                    item_dict['IP_PROP359'] = ''
                                 try:
                                     if 'x' in description_text:
-                                        item_dict['IP_PROP72'] = \
+                                        item_dict['IP_PROP360'] = \
                                             description_text.split('x')[1].split('мм')[0].strip().split(
                                                 ' ')[-1]
                                     elif 'х' in description_text:
-                                        item_dict['IP_PROP72'] = \
+                                        item_dict['IP_PROP360'] = \
                                             description_text.split('х')[1].split('мм')[0].strip().split(
                                                 ' ')[-1]
-                                    IP_PROP_LIST_PROPOSAL['Ширина, мм'] = 'IP_PROP72'
-                                    item_dict['IP_PROP90'] += 'width' + item_dict['IP_PROP72']
+                                    IP_PROP_LIST_PROPOSAL['Ширина, мм'] = 'IP_PROP360'
+                                    item_dict['IP_PROP90'] += 'width' + item_dict['IP_PROP360']
                                 except Exception:
-                                    item_dict['IP_PROP72'] = ''
+                                    item_dict['IP_PROP360'] = ''
                                 try:
                                     if 'x' in description_text:
-                                        item_dict['IP_PROP73'] = \
+                                        item_dict['IP_PROP361'] = \
                                             description_text.split('x')[2].split('мм')[0].strip().split(
                                                 ' ')[-1]
                                     elif 'х' in description_text:
-                                        item_dict['IP_PROP73'] = \
+                                        item_dict['IP_PROP361'] = \
                                             description_text.split('х')[2].split('мм')[0].strip().split(
                                                 ' ')[-1]
-                                    IP_PROP_LIST_PROPOSAL['Глубина, мм'] = 'IP_PROP73'
-                                    item_dict['IP_PROP90'] += 'depth' + item_dict['IP_PROP73']
+                                    IP_PROP_LIST_PROPOSAL['Глубина, мм'] = 'IP_PROP361'
+                                    item_dict['IP_PROP90'] += 'depth' + item_dict['IP_PROP361']
                                 except Exception:
-                                    item_dict['IP_PROP73'] = ''
+                                    item_dict['IP_PROP361'] = ''
                     ALL_DATA["proposal"].append(item_dict)
                 else:
+                    counter = 0
                     for item in soup.find(class_='product-attributes').find_all(class_='item'):
                         item_dict = {}
                         item_dict['IE_XML_ID'] = IE_XML_ID
@@ -505,129 +539,208 @@ def parser(url, picture, proposal):
                             item_dict['IE_NAME'] = ''
                             IE_SUBNAME = ''
                         item_dict['IP_PROP90'] = ''
-                        IP_PROP_LIST_PROPOSAL['IE_XML_ID товара'] = 'IP_PROP91'
+                        IP_PROP_LIST_PROPOSAL['IE_XML_ID товара'] = 'IP_PROP358'
                         IP_PROP_LIST_PROPOSAL['Товарное предложение'] = 'IP_PROP90'
                         for p in soup.find(class_='field_content').find_all('p'):
                             description = p.text
                             if not ':' in p.find('span').text or p.text == p.find('span').text:
                                 continue
                             description_name, description_text = description.split(':')[0], description.split(':', 1)[1]
+                            nameindesc = False
+                            all_name_c = all_name.copy()
+                            if IE_SUBNAME in all_name:
+                                all_name_c.remove(IE_SUBNAME)
+                            for i in all_name_c:
+                                if i in description_name or ''.join(i.replace('комплект №', '').split()[:-1]) in description_name:
+                                    nameindesc = True
                             if IC_GROUP_LIST[0] in ['Металлические стеллажи', 'Верстаки и Инструментальные шкафы'] and 'омплектаци' in description_name:
                                 if IE_SUBNAME in description_name and IE_SUBNAME != '':
-                                    item_dict[IP_PROP_ALL['Комплектация']] = description_text
-                                    IP_PROP_LIST_PROPOSAL['Комплектация'] = IP_PROP_ALL['Комплектация']
+                                    item_dict[IP_PROP_ALL_PROPOSAL['Комплектация']] = description_text
+                                    IP_PROP_LIST_PROPOSAL['Комплектация'] = IP_PROP_ALL_PROPOSAL['Комплектация']
                                 elif not '<br>' in str(p) and description_name == 'Комплектация':
-                                    item_dict[IP_PROP_ALL['Комплектация']] = description_text
-                                    IP_PROP_LIST_PROPOSAL['Комплектация'] = IP_PROP_ALL['Комплектация']
-                        try:
-                            if 'x' in item.find(class_='name').find(class_='size').text:
-                                item_dict['IP_PROP71'] = \
-                                    item.find(class_='name').find(class_='size').text.split('x')[0].split('мм')[
-                                        0].strip().split(
-                                        ' ')[-1]
-                                IP_PROP_LIST_PROPOSAL['Высота, мм'] = 'IP_PROP71'
-                                item_dict['IP_PROP90'] += 'heigh' + item_dict['IP_PROP71']
-                            elif 'х' in item.find(class_='name').find(class_='size').text:
-                                item_dict['IP_PROP71'] = \
-                                    item.find(class_='name').find(class_='size').text.split('х')[0].split('мм')[
-                                        0].strip().split(
-                                        ' ')[-1]
-                                IP_PROP_LIST_PROPOSAL['Высота, мм'] = 'IP_PROP71'
-                                item_dict['IP_PROP90'] += 'heigh' + item_dict['IP_PROP71']
-                            else:
-                                print(item.find(class_='name').find(class_='size').text)
-                        except AttributeError:
+                                    item_dict[IP_PROP_ALL_PROPOSAL['Комплектация']] = description_text
+                                    IP_PROP_LIST_PROPOSAL['Комплектация'] = IP_PROP_ALL_PROPOSAL['Комплектация']
+                            elif 'азмер' in description_name and not nameindesc:
+                                if '\n' in description_text:
+                                    full_description = [i.strip() for i in description_text.split('\n') if i.strip() != '']
+                                    description_text = full_description[counter]
+                                if '/' in description_name.replace(IE_SUBNAME.replace('для', '').replace('/n', '').strip(), ''):
+                                    if ALL_DATA['IE_XML_ID'] == 2689:
+                                        description_text = \
+                                            [i.strip() for i in description_text.split('\n') if i.strip() != ''][-1]
+                                    for ind in range(len(description_name.split('/'))):
+                                        description_name_ind = description_name.split('/')[ind].strip()
+                                        description_text_ind = description_text.split('/')[ind].strip()
+                                        if 'азмер' in description_name_ind:
+                                            try:
+                                                if 'x' in description_text_ind:
+                                                    item_dict['IP_PROP359'] = \
+                                                        description_text_ind.split('x')[0].split('мм')[0].strip().split(
+                                                            ' ')[-1]
+                                                elif 'х' in description_text_ind:
+                                                    item_dict['IP_PROP359'] = \
+                                                        description_text_ind.split('х')[0].split('мм')[0].strip().split(
+                                                            ' ')[-1]
+                                                IP_PROP_LIST_PROPOSAL['Высота, мм'] = 'IP_PROP359'
+                                                item_dict['IP_PROP90'] += 'heigh' + item_dict['IP_PROP359']
+                                            except Exception:
+                                                item_dict['IP_PROP359'] = ''
+                                            try:
+                                                if 'x' in description_text_ind:
+                                                    item_dict['IP_PROP360'] = \
+                                                        description_text_ind.split('x')[1].split('мм')[0].strip().split(
+                                                            ' ')[-1]
+                                                elif 'х' in description_text_ind:
+                                                    item_dict['IP_PROP360'] = \
+                                                        description_text_ind.split('х')[1].split('мм')[0].strip().split(
+                                                            ' ')[-1]
+                                                IP_PROP_LIST_PROPOSAL['Ширина, мм'] = 'IP_PROP360'
+                                                item_dict['IP_PROP90'] += 'width' + item_dict['IP_PROP360']
+                                            except Exception:
+                                                item_dict['IP_PROP360'] = ''
+                                            try:
+                                                if 'x' in description_text_ind:
+                                                    item_dict['IP_PROP361'] = \
+                                                        description_text_ind.split('x')[2].split('мм')[0].strip().split(
+                                                            ' ')[-1]
+                                                elif 'х' in description_text_ind:
+                                                    item_dict['IP_PROP361'] = \
+                                                        description_text_ind.split('х')[2].split('мм')[0].strip().split(
+                                                            ' ')[-1]
+                                                IP_PROP_LIST_PROPOSAL['Глубина, мм'] = 'IP_PROP361'
+                                                item_dict['IP_PROP90'] += 'depth' + item_dict['IP_PROP361']
+                                            except Exception:
+                                                item_dict['IP_PROP361'] = ''
+                                        if 'Вес' in description_name_ind:
+                                            item_dict['IP_PROP362'] = description_text_ind.split()[0]
+                                            IP_PROP_LIST_PROPOSAL['Вес, кг'] = 'IP_PROP362'
+                                            item_dict['IP_PROP90'] += 'weight' + item_dict['IP_PROP362']
+
+                        if 'IP_PROP359' not in item_dict.keys():
                             try:
-                                if 'x' in item.find(class_='name').find('h3').text:
-                                    item_dict['IP_PROP71'] = \
-                                        item.find(class_='name').find('h3').text.split('x')[0].split('мм')[0].strip().split(
+                                if 'x' in item.find(class_='name').find(class_='size').text:
+                                    item_dict['IP_PROP359'] = \
+                                        item.find(class_='name').find(class_='size').text.split('x')[0].split('мм')[
+                                            0].strip().split(
                                             ' ')[-1]
-                                elif 'х' in item.find(class_='name').find('h3').text:
-                                    item_dict['IP_PROP71'] = \
-                                        item.find(class_='name').find('h3').text.split('х')[0].split('мм')[0].strip().split(
+                                    IP_PROP_LIST_PROPOSAL['Высота, мм'] = 'IP_PROP359'
+                                    item_dict['IP_PROP90'] += 'heigh' + item_dict['IP_PROP359']
+                                elif 'х' in item.find(class_='name').find(class_='size').text:
+                                    item_dict['IP_PROP359'] = \
+                                        item.find(class_='name').find(class_='size').text.split('х')[0].split('мм')[
+                                            0].strip().split(
                                             ' ')[-1]
+                                    IP_PROP_LIST_PROPOSAL['Высота, мм'] = 'IP_PROP359'
+                                    item_dict['IP_PROP90'] += 'heigh' + item_dict['IP_PROP359']
+                                #else:
+                                #    print(item.find(class_='name').find(class_='size').text)
                                 else:
                                     if 'см' in item.find(class_='name').find(class_='size').text:
-                                        item_dict['IP_PROP71'] = str(int(item.find(class_='name').find('h3').text.split('см')[0].strip()) * 10)
+                                        item_dict['IP_PROP359'] = str(
+                                            int(''.join([i for i in list(item.find(class_='name').find('h3').text.split('см')[0].strip()) if i.isdigit()])) * 10)
+                                        item_dict['IP_PROP90'] += 'heigh' + item_dict['IP_PROP359']
                                     else:
-                                        item_dict['IP_PROP71'] = \
-                                            item.find(class_='name').find('h3').text.strip()
-                                IP_PROP_LIST_PROPOSAL['Высота, мм'] = 'IP_PROP71'
-                                item_dict['IP_PROP90'] += 'heigh' + item_dict['IP_PROP71']
-                            except Exception as ex:
-                                heigh = ''.join([i for i in list(item.find(class_='name').find('h3').text) if i.isdigit()])
-                                item_dict['IP_PROP71'] = heigh
-                                item_dict['IP_PROP90'] += 'heigh' + item_dict['IP_PROP71']
-                        try:
-                            if 'x' in item.find(class_='name').find(class_='size').text:
-                                item_dict['IP_PROP72'] = \
-                                    item.find(class_='name').find(class_='size').text.split('x')[1].split('мм')[
-                                        0].strip().split(
-                                        ' ')[-1]
-                                IP_PROP_LIST_PROPOSAL['Ширина, мм'] = 'IP_PROP72'
-                                item_dict['IP_PROP90'] += 'width' + item_dict['IP_PROP72']
-                            elif 'х' in item.find(class_='name').find(class_='size').text:
-                                item_dict['IP_PROP72'] = \
-                                    item.find(class_='name').find(class_='size').text.split('х')[1].split('мм')[
-                                        0].strip().split(
-                                        ' ')[-1]
-                                IP_PROP_LIST_PROPOSAL['Ширина, мм'] = 'IP_PROP72'
-                                item_dict['IP_PROP90'] += 'width' + item_dict['IP_PROP72']
-                            else:
-                                pass
-                        except AttributeError:
+                                        item_dict['IP_PROP359'] = ''.join([i for i in list(item.find(class_='name').find('h3').text.strip()) if i.isdigit()])
+                                        item_dict['IP_PROP90'] += 'heigh' + item_dict['IP_PROP359']
+                            except AttributeError:
+                                try:
+                                    if 'x' in item.find(class_='name').find('h3').text:
+                                        item_dict['IP_PROP359'] = \
+                                            item.find(class_='name').find('h3').text.split('x')[0].split('мм')[0].strip().split(
+                                                ' ')[-1]
+                                    elif 'х' in item.find(class_='name').find('h3').text:
+                                        item_dict['IP_PROP359'] = \
+                                            item.find(class_='name').find('h3').text.split('х')[0].split('мм')[0].strip().split(
+                                                ' ')[-1]
+                                    else:
+                                        if 'см' in item.find(class_='name').find(class_='size').text:
+                                            item_dict['IP_PROP359'] = str(int(item.find(class_='name').find('h3').text.split('см')[0].strip()) * 10)
+                                            item_dict['IP_PROP90'] += 'heigh' + item_dict['IP_PROP359']
+                                        else:
+                                            item_dict['IP_PROP359'] = \
+                                                item.find(class_='name').find('h3').text.strip()
+                                            item_dict['IP_PROP90'] += 'heigh' + item_dict['IP_PROP359']
+                                    IP_PROP_LIST_PROPOSAL['Высота, мм'] = 'IP_PROP359'
+                                    item_dict['IP_PROP90'] += 'heigh' + item_dict['IP_PROP359']
+                                except Exception as ex:
+                                    heigh = ''.join([i for i in list(item.find(class_='name').find('h3').text) if i.isdigit()])
+                                    item_dict['IP_PROP359'] = heigh
+                                    item_dict['IP_PROP90'] += 'heigh' + item_dict['IP_PROP359']
                             try:
-                                if 'x' in item.find(class_='name').find('h3').text:
-                                    item_dict['IP_PROP72'] = \
-                                        item.find(class_='name').find('h3').text.split('x')[1].split('мм')[0].strip().split(
+                                if 'x' in item.find(class_='name').find(class_='size').text:
+                                    item_dict['IP_PROP360'] = \
+                                        item.find(class_='name').find(class_='size').text.split('x')[1].split('мм')[
+                                            0].strip().split(
                                             ' ')[-1]
-                                elif 'х' in item.find(class_='name').find('h3').text:
-                                    item_dict['IP_PROP72'] = \
-                                        item.find(class_='name').find('h3').text.split('х')[1].split('мм')[0].strip().split(
+                                    IP_PROP_LIST_PROPOSAL['Ширина, мм'] = 'IP_PROP360'
+                                    item_dict['IP_PROP90'] += 'width' + item_dict['IP_PROP360']
+                                elif 'х' in item.find(class_='name').find(class_='size').text:
+                                    item_dict['IP_PROP360'] = \
+                                        item.find(class_='name').find(class_='size').text.split('х')[1].split('мм')[
+                                            0].strip().split(
                                             ' ')[-1]
-                                IP_PROP_LIST_PROPOSAL['Ширина, мм'] = 'IP_PROP72'
-                                item_dict['IP_PROP90'] += 'width' + item_dict['IP_PROP72']
-                            except Exception as ex:
-                                item_dict['IP_PROP72'] = ''
-                        try:
-                            if 'x' in item.find(class_='name').find(class_='size').text:
-                                item_dict['IP_PROP73'] = \
-                                    item.find(class_='name').find(class_='size').text.split('x')[2].split('мм')[
-                                        0].strip().split(
-                                        ' ')[-1]
-                                IP_PROP_LIST_PROPOSAL['Глубина, мм'] = 'IP_PROP73'
-                                item_dict['IP_PROP90'] += 'depth' + item_dict['IP_PROP73']
-                            elif 'х' in item.find(class_='name').find(class_='size').text:
-                                item_dict['IP_PROP73'] = \
-                                    item.find(class_='name').find(class_='size').text.split('х')[2].split('мм')[
-                                        0].strip().split(
-                                        ' ')[-1]
-                                IP_PROP_LIST_PROPOSAL['Глубина, мм'] = 'IP_PROP73'
-                                item_dict['IP_PROP90'] += 'depth' + item_dict['IP_PROP73']
-                            else:
+                                    IP_PROP_LIST_PROPOSAL['Ширина, мм'] = 'IP_PROP360'
+                                    item_dict['IP_PROP90'] += 'width' + item_dict['IP_PROP360']
+                                else:
+                                    pass
+                            except AttributeError:
+                                try:
+                                    if 'x' in item.find(class_='name').find('h3').text:
+                                        item_dict['IP_PROP360'] = \
+                                            item.find(class_='name').find('h3').text.split('x')[1].split('мм')[0].strip().split(
+                                                ' ')[-1]
+                                    elif 'х' in item.find(class_='name').find('h3').text:
+                                        item_dict['IP_PROP360'] = \
+                                            item.find(class_='name').find('h3').text.split('х')[1].split('мм')[0].strip().split(
+                                                ' ')[-1]
+                                    IP_PROP_LIST_PROPOSAL['Ширина, мм'] = 'IP_PROP360'
+                                    item_dict['IP_PROP90'] += 'width' + item_dict['IP_PROP360']
+                                except Exception as ex:
+                                    item_dict['IP_PROP360'] = ''
+                            except Exception:
                                 pass
-                        except AttributeError:
                             try:
-                                if 'x' in item.find(class_='name').find('h3').text:
-                                    item_dict['IP_PROP73'] = \
-                                        item.find(class_='name').find('h3').text.split('x')[2].split('мм')[0].strip().split(
+                                if 'x' in item.find(class_='name').find(class_='size').text:
+                                    item_dict['IP_PROP361'] = \
+                                        item.find(class_='name').find(class_='size').text.split('x')[2].split('мм')[
+                                            0].strip().split(
                                             ' ')[-1]
-                                elif 'х' in item.find(class_='name').find('h3').text:
-                                    item_dict['IP_PROP73'] = \
-                                        item.find(class_='name').find('h3').text.split('х')[2].split('мм')[0].strip().split(
+                                    IP_PROP_LIST_PROPOSAL['Глубина, мм'] = 'IP_PROP361'
+                                    item_dict['IP_PROP90'] += 'depth' + item_dict['IP_PROP361']
+                                elif 'х' in item.find(class_='name').find(class_='size').text:
+                                    item_dict['IP_PROP361'] = \
+                                        item.find(class_='name').find(class_='size').text.split('х')[2].split('мм')[
+                                            0].strip().split(
                                             ' ')[-1]
-                                IP_PROP_LIST_PROPOSAL['Глубина, мм'] = 'IP_PROP73'
-                                item_dict['IP_PROP90'] += 'depth' + item_dict['IP_PROP73']
-                            except Exception as ex:
-                                item_dict['IP_PROP73'] = ''
+                                    IP_PROP_LIST_PROPOSAL['Глубина, мм'] = 'IP_PROP361'
+                                    item_dict['IP_PROP90'] += 'depth' + item_dict['IP_PROP361']
+                                else:
+                                    pass
+                            except AttributeError:
+                                try:
+                                    if 'x' in item.find(class_='name').find('h3').text:
+                                        item_dict['IP_PROP361'] = \
+                                            item.find(class_='name').find('h3').text.split('x')[2].split('мм')[0].strip().split(
+                                                ' ')[-1]
+                                    elif 'х' in item.find(class_='name').find('h3').text:
+                                        item_dict['IP_PROP361'] = \
+                                            item.find(class_='name').find('h3').text.split('х')[2].split('мм')[0].strip().split(
+                                                ' ')[-1]
+                                    IP_PROP_LIST_PROPOSAL['Глубина, мм'] = 'IP_PROP361'
+                                    item_dict['IP_PROP90'] += 'depth' + item_dict['IP_PROP361']
+                                except Exception as ex:
+                                    item_dict['IP_PROP361'] = ''
+                            except Exception:
+                                pass
                         item_dict['IE_CODE'] = translit(item_dict['IE_NAME'], language_code='ru', reversed=True).replace(
                             ' ', '-')
                         try:
                             item_dict['CV_PRICE_1'] = item.find(class_='price').text.split('р.')[0].strip()
                         except Exception:
                             item_dict['CV_PRICE_1'] = ''
-                        item_dict['IP_PROP91'] = ALL_DATA['IE_XML_ID']
+                        item_dict['IP_PROP358'] = ALL_DATA['IE_XML_ID']
                         ALL_DATA["proposal"].append(item_dict)
+                        counter += 1
         else:
             item_dict = {}
             item_dict['IE_XML_ID'] = IE_XML_ID
@@ -640,8 +753,8 @@ def parser(url, picture, proposal):
                     filter(None, map(unicode.strip, soup.find(class_='price').text.splitlines())))[:-3]
             except Exception:
                 item_dict['CV_PRICE_1'] = ''
-            item_dict['IP_PROP91'] = ALL_DATA['IE_XML_ID']
-            IP_PROP_LIST_PROPOSAL['IE_XML_ID товара'] = 'IP_PROP91'
+            item_dict['IP_PROP358'] = ALL_DATA['IE_XML_ID']
+            IP_PROP_LIST_PROPOSAL['IE_XML_ID товара'] = 'IP_PROP358'
             IP_PROP_LIST_PROPOSAL['Товарное предложение'] = 'IP_PROP90'
             for p in soup.find(class_='field_content').find_all('p'):
                 description = p.text
@@ -660,37 +773,92 @@ def parser(url, picture, proposal):
                 elif IC_GROUP_LIST[0] in ['Металлические стеллажи',
                                         'Верстаки и Инструментальные шкафы'] and 'омплектаци' in description_name:
                     if not '<br>' in str(p) and description_name == 'Комплектация':
-                        item_dict[IP_PROP_ALL['Комплектация']] = description_text
+                        item_dict[IP_PROP_ALL_PROPOSAL['Комплектация']] = description_text
                 elif 'азмер' in description_name:
                     item_dict['IP_PROP90'] = ''
-                    try:
-                        if 'x' in description_text:
-                            item_dict['IP_PROP71'] = description_text.split('x')[0].split('мм')[0].strip().split(' ')[-1]
-                        elif 'х' in description_text:
-                            item_dict['IP_PROP71'] = description_text.split('х')[0].split('мм')[0].strip().split(' ')[-1]
-                        IP_PROP_LIST_PROPOSAL['Высота, мм'] = 'IP_PROP71'
-                        item_dict['IP_PROP90'] += 'heigh' + item_dict['IP_PROP71']
-                    except Exception as ex:
-                        #print(ex)
-                        item_dict['IP_PROP71'] = ''
-                    try:
-                        if 'x' in description_text:
-                            item_dict['IP_PROP72'] = description_text.split('x')[1].split('мм')[0].strip().split(' ')[-1]
-                        elif 'х' in description_text:
-                            item_dict['IP_PROP72'] = description_text.split('х')[1].split('мм')[0].strip().split(' ')[-1]
-                        IP_PROP_LIST_PROPOSAL['Ширина, мм'] = 'IP_PROP72'
-                        item_dict['IP_PROP90'] += 'width' + item_dict['IP_PROP72']
-                    except Exception:
-                        item_dict['IP_PROP72'] = ''
-                    try:
-                        if 'x' in description_text:
-                            item_dict['IP_PROP73'] = description_text.split('x')[2].split('мм')[0].strip().split(' ')[-1]
-                        elif 'х' in description_text:
-                            item_dict['IP_PROP73'] = description_text.split('х')[2].split('мм')[0].strip().split(' ')[-1]
-                        IP_PROP_LIST_PROPOSAL['Глубина, мм'] = 'IP_PROP73'
-                        item_dict['IP_PROP90'] += 'depth' + item_dict['IP_PROP73']
-                    except Exception:
-                        item_dict['IP_PROP73'] = ''
+                    #print(item_dict['IE_NAME'])
+                    if '/' in description_name.replace('/n', '').strip() and url != 'https://paksmet.ru/produktsiya/garderobnye-sistemy/product/view/85/834':
+                        if ALL_DATA['IE_XML_ID'] == 2689:
+                            description_text = \
+                                [i.strip() for i in description_text.split('\n') if i.strip() != ''][-1]
+                        for ind in range(len(description_name.split('/'))):
+                            description_name_ind = description_name.split('/')[ind].strip()
+                            description_text_ind = description_text.split('/')[ind].strip()
+                            if 'азмер' in description_name_ind:
+                                try:
+                                    if 'x' in description_text_ind:
+                                        item_dict['IP_PROP359'] = \
+                                            description_text_ind.split('x')[0].split('мм')[0].strip().split(
+                                                ' ')[-1]
+                                    elif 'х' in description_text_ind:
+                                        item_dict['IP_PROP359'] = \
+                                            description_text_ind.split('х')[0].split('мм')[0].strip().split(
+                                                ' ')[-1]
+                                    IP_PROP_LIST_PROPOSAL['Высота, мм'] = 'IP_PROP359'
+                                    item_dict['IP_PROP90'] += 'heigh' + item_dict['IP_PROP359']
+                                except Exception:
+                                    item_dict['IP_PROP359'] = ''
+                                try:
+                                    if 'x' in description_text_ind:
+                                        item_dict['IP_PROP360'] = \
+                                            description_text_ind.split('x')[1].split('мм')[0].strip().split(
+                                                ' ')[-1]
+                                    elif 'х' in description_text_ind:
+                                        item_dict['IP_PROP360'] = \
+                                            description_text_ind.split('х')[1].split('мм')[0].strip().split(
+                                                ' ')[-1]
+                                    IP_PROP_LIST_PROPOSAL['Ширина, мм'] = 'IP_PROP360'
+                                    item_dict['IP_PROP90'] += 'width' + item_dict['IP_PROP360']
+                                except Exception:
+                                    item_dict['IP_PROP360'] = ''
+                                try:
+                                    if 'x' in description_text_ind:
+                                        item_dict['IP_PROP361'] = \
+                                            description_text_ind.split('x')[2].split('мм')[0].strip().split(
+                                                ' ')[-1]
+                                    elif 'х' in description_text_ind:
+                                        item_dict['IP_PROP361'] = \
+                                            description_text_ind.split('х')[2].split('мм')[0].strip().split(
+                                                ' ')[-1]
+                                    IP_PROP_LIST_PROPOSAL['Глубина, мм'] = 'IP_PROP361'
+                                    item_dict['IP_PROP90'] += 'depth' + item_dict['IP_PROP361']
+                                except Exception:
+                                    item_dict['IP_PROP361'] = ''
+                            if 'Вес' in description_name_ind:
+                                item_dict['IP_PROP362'] = description_text_ind.split()[0]
+                                IP_PROP_LIST_PROPOSAL['Вес, кг'] = 'IP_PROP362'
+                                item_dict['IP_PROP90'] += 'weight' + item_dict['IP_PROP362']
+                    else:
+                        try:
+                            if 'x' in description_text:
+                                item_dict['IP_PROP359'] = description_text.split('x')[0].split('мм')[0].strip().split(' ')[-1]
+                            elif 'х' in description_text:
+                                item_dict['IP_PROP359'] = description_text.split('х')[0].split('мм')[0].strip().split(' ')[-1]
+                            else:
+                                item_dict['IP_PROP359'] = ''.join([i for i in list(description_text) if i.isdigit()])
+                            IP_PROP_LIST_PROPOSAL['Высота, мм'] = 'IP_PROP359'
+                            item_dict['IP_PROP90'] += 'heigh' + item_dict['IP_PROP359']
+                        except Exception as ex:
+                            #print(ex)
+                            item_dict['IP_PROP359'] = ''
+                        try:
+                            if 'x' in description_text:
+                                item_dict['IP_PROP360'] = description_text.split('x')[1].split('мм')[0].strip().split(' ')[-1]
+                            elif 'х' in description_text:
+                                item_dict['IP_PROP360'] = description_text.split('х')[1].split('мм')[0].strip().split(' ')[-1]
+                            IP_PROP_LIST_PROPOSAL['Ширина, мм'] = 'IP_PROP360'
+                            item_dict['IP_PROP90'] += 'width' + item_dict['IP_PROP360']
+                        except Exception:
+                            item_dict['IP_PROP360'] = ''
+                        try:
+                            if 'x' in description_text:
+                                item_dict['IP_PROP361'] = description_text.split('x')[2].split('мм')[0].strip().split(' ')[-1]
+                            elif 'х' in description_text:
+                                item_dict['IP_PROP361'] = description_text.split('х')[2].split('мм')[0].strip().split(' ')[-1]
+                            IP_PROP_LIST_PROPOSAL['Глубина, мм'] = 'IP_PROP361'
+                            item_dict['IP_PROP90'] += 'depth' + item_dict['IP_PROP361']
+                        except Exception:
+                            item_dict['IP_PROP361'] = ''
                 elif 'В инструментальный шкаф' in description_name:
                     if 'В инструментальный шкаф можно установить' in IP_PROP_ALL.keys():
                         IP_PROP_LIST['В инструментальный шкаф можно установить'] = IP_PROP_ALL[
@@ -704,8 +872,11 @@ def parser(url, picture, proposal):
                         ALL_DATA[IP_PROP_ALL['В инструментальный шкаф можно установить']] = description_text.strip()
             ALL_DATA["proposal"].append(item_dict)
     else:
-        ALL_DATA['IE_NAME'] = ''.join(
-            filter(None, map(unicode.strip, soup.find(class_='card-product__title').text.splitlines())))
+        try:
+            ALL_DATA['IE_NAME'] = ''.join(
+                filter(None, map(unicode.strip, soup.find(class_='card-product__title').text.splitlines())))
+        except Exception:
+            ALL_DATA['IE_NAME'] = f'No name{ALL_DATA["IE_XML_ID"]}'
         ALL_DATA['IE_CODE'] = translit(ALL_DATA['IE_NAME'], language_code='ru', reversed=True).replace(' ', '-')
         try:
             ALL_DATA['CV_PRICE_1'] = ''.join(
@@ -713,8 +884,12 @@ def parser(url, picture, proposal):
         except Exception:
             ALL_DATA['CV_PRICE_1'] = ''
         for p in soup.find(class_='field_content').find_all('p'):
+            if not p:
+                continue
             description = p.text
-            if not ':' in p.find('span').text or p.text == p.find('span').text:
+            if not p.find('span') or not ':' in p.find('span').text or p.text == p.find('span').text:
+                if p.find('span'):
+                    ALL_DATA['IE_DETAIL_TEXT'] += p.find('span').text.strip()
                 continue
             description_name, description_text = description.split(':')[0], description.split(':', 1)[1]
             if not 'азмер' in description_name:
@@ -752,16 +927,17 @@ def parser(url, picture, proposal):
                     IP_PROP_LIST['Глубина, мм'] = 'IP_PROP73'
                 except Exception:
                     ALL_DATA['IP_PROP73'] = ''
+    ALL_DATA['IE_DETAIL_TEXT'] += "<ul><li>Габариты изделий приведены без учета габаритов выступающих деталей (замков и т.п.).</li><li>Допустимое отклонение +/-10% от веса изделия.</li><li>Цвет изделия может отличаться от представленного на фотографии.</li></ul>"
     return ALL_DATA
 
 
 request = requests.get('https://paksmet.ru/produktsiya')
 src = request.text
 soup = BeautifulSoup(src, "lxml")
-for name in soup.find(class_='products-list').find_all('li'):
-    print(name.find('span').text, 'https://paksmet.ru' + name.find('a')['href'] + '\n')
+for name in soup.find(class_='products-list').find_all('li')[:-1]:
+    print('\n' + name.find('span').text, 'https://paksmet.ru' + name.find('a')['href'])
     proposal = True
-    if name.find('span').text in ['Картотечные шкафы', 'Сейфы', 'Бухгалтерские шкафы', 'Гардеробные системы']:
+    if name.find('span').text in ['Картотечные шкафы', 'Сейфы', 'Бухгалтерские шкафы']:
         proposal = False
     main_url = 'https://paksmet.ru' + name.find('a')['href']
     IC_GROUP_LIST = [name.find('span').text]
@@ -781,8 +957,8 @@ for name in soup.find(class_='products-list').find_all('li'):
             src = request.text
             page_soup = BeautifulSoup(src, "lxml")
             for item in page_soup.find_all(class_='product-item'):
-                if not item.find(class_='name').text in ALL_PRODUCTS:
-                    ALL_PRODUCTS.add(item.find(class_='name').text)
+                if not item.find(class_='product-header').find('a')['href'] in ALL_PRODUCTS:
+                    ALL_PRODUCTS.add(item.find(class_='product-header').find('a')['href'])
                     try:
                         PREVIEW_PICTURE = item.find('img')['src']
                     except Exception:
@@ -791,6 +967,8 @@ for name in soup.find(class_='products-list').find_all('li'):
                         'https://paksmet.ru' + item.find(class_='product-header').find('a')['href'], PREVIEW_PICTURE,
                         proposal))
                     print('https://paksmet.ru' + item.find(class_='product-header').find('a')['href'])
+                else:
+                    print('https://paksmet.ru' + item.find(class_='product-header').find('a')['href'], 'inlist')
             try:
                 for sub_page in page_soup.find(class_='category-list').find_all('a'):
                     IC_GROUP_LIST.append(sub_page.find('p').text)
@@ -800,8 +978,8 @@ for name in soup.find(class_='products-list').find_all('li'):
                     src = request.text
                     sub_soup = BeautifulSoup(src, "lxml")
                     for item in sub_soup.find_all(class_='product-item'):
-                        if not item.find(class_='name').text in ALL_PRODUCTS:
-                            ALL_PRODUCTS.add(item.find(class_='name').text)
+                        if not item.find(class_='product-header').find('a')['href'] in ALL_PRODUCTS:
+                            ALL_PRODUCTS.add(item.find(class_='product-header').find('a')['href'])
                             try:
                                 PREVIEW_PICTURE = item.find('img')['src']
                             except Exception:
@@ -810,6 +988,8 @@ for name in soup.find(class_='products-list').find_all('li'):
                                 'https://paksmet.ru' + item.find(class_='product-header').find('a')['href'],
                                 PREVIEW_PICTURE, proposal))
                             print('https://paksmet.ru' + item.find(class_='product-header').find('a')['href'])
+                        else:
+                            print('https://paksmet.ru' + item.find(class_='product-header').find('a')['href'], 'inlist')
                     IC_GROUP_LIST.pop()
             except Exception:
                 pass
@@ -817,8 +997,8 @@ for name in soup.find(class_='products-list').find_all('li'):
     else:
         print(IC_GROUP_LIST)
         for item in soup.find_all(class_='product-item'):
-            if not item.find(class_='name').text in ALL_PRODUCTS:
-                ALL_PRODUCTS.add(item.find(class_='name').text)
+            if not item.find(class_='product-header').find('a')['href'] in ALL_PRODUCTS:
+                ALL_PRODUCTS.add(item.find(class_='product-header').find('a')['href'])
                 try:
                     PREVIEW_PICTURE = item.find('img')['src']
                 except Exception:
@@ -848,9 +1028,12 @@ for name in soup.find(class_='products-list').find_all('li'):
                             'https://paksmet.ru' + item.find(class_='product-header').find('a')['href'],
                             PREVIEW_PICTURE, proposal))
                         print('https://paksmet.ru' + item.find(class_='product-header').find('a')['href'])
+                    else:
+                        print('https://paksmet.ru' + item.find(class_='product-header').find('a')['href'], 'inlist')
                 IC_GROUP_LIST.pop()
         except Exception:
             pass
+
 
     with open(f"data paksmet/product/products/{translit(name.find('span').text, language_code='ru', reversed=True)}.csv", "w", encoding='utf-8', newline='') as file:
         writer = csv.writer(file, delimiter=';')
@@ -889,7 +1072,7 @@ for name in soup.find(class_='products-list').find_all('li'):
                   newline='') as file:
             writer = csv.writer(file, delimiter=';')
             header_table = tuple(
-                ['IE_XML_ID', 'IE_NAME', 'IE_CODE'] + list(IP_PROP_LIST_PROPOSAL.values()) + ['CV_PRICE_1'])
+                ['IE_XML_ID', 'IP_PROP356', 'IE_CODE'] + list(IP_PROP_LIST_PROPOSAL.values()) + ['CR_PRICE_1_RUB'])
             writer.writerow(header_table)
         with open(f"data paksmet/product/proposals/{translit(name.find('span').text, language_code='ru', reversed=True)}_proposal.csv", "a", encoding='utf-8',
                   newline='') as file:
@@ -913,4 +1096,8 @@ for key, value in IP_PROP_ALL.items():
 print('\n\n')
 
 for key, value in IP_PROP_ALL.items():
+   print(f'{value}    {key}')
+print('\n\n')
+
+for key, value in IP_PROP_ALL_PROPOSAL.items():
    print(f'{value}    {key}')
